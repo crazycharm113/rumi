@@ -140,15 +140,21 @@ function audienceChip(a) {
 
 // 주제별 추천 제품: 블로거들이 많이 언급한 제품 + 내 보드에 담아 둔 같은 종류 상품
 function picksBlock(t) {
-  const p = t.picks || { items: [], mine: [] };
-  if (!p.items.length && !p.mine.length) return p.error ? `<div class="small muted">추천 제품을 가져오지 못했어요.</div>` : '';
+  const p = t.picks || { items: [], mine: [], reviews: [] };
+  if (p.error) return `<div class="picks small muted">추천 제품을 가져오지 못했어요.</div>`;
+  const items = p.items || [];
+  const reviews = p.reviews || [];
   return `<div class="picks"><div class="small muted">추천 제품 · 블로그 언급 기준${p.demo ? ' (예시)' : ''}</div>
-    <ul>${p.items.map((x) => `<li>
+    ${items.length ? `<ul>${items.map((x) => `<li>
       <a class="pick-name" href="${esc(x.shopUrl)}" target="_blank" rel="noopener noreferrer" title="네이버 쇼핑에서 검색">${esc(x.name)}&nbsp;↗</a>
       <span class="pick-meta small muted">언급 ${x.mentions}회${x.review?.link && x.review.link !== '#' ? ` · <a href="${esc(x.review.link)}" target="_blank" rel="noopener noreferrer" title="${esc(x.review.title)}">후기</a>` : ''}</span>
       <button class="btn ghost sm pick-add" data-x='${esc(JSON.stringify({ name: x.name, brand: x.brand, memo: `네이버 쇼핑 검색: ${x.shopUrl}` }))}' data-kw="${esc(t.word)}" onclick="addToBoard(JSON.parse(this.dataset.x), this.dataset.kw)">담기</button>
-    </li>`).join('')}
-    ${p.mine.map((x) => `<li><a href="#/boards/${x.boardId}">내 보드: ${esc(x.name || '이름 없음')}</a>${x.price ? ` <span class="small muted">${won(x.price)}</span>` : ''}</li>`).join('')}</ul></div>`;
+    </li>`).join('')}</ul>`
+    : `<p class="small muted" style="margin:4px 0">블로그 글에서 자주 언급된 브랜드 제품을 찾지 못했어요. 아래 후기 글과 쇼핑 검색을 참고하세요.</p>
+       ${reviews.length ? `<ul>${reviews.map((r) => `<li><a class="pick-review" href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">📝 ${esc(r.title)}</a></li>`).join('')}</ul>` : ''}`}
+    ${(p.mine || []).map((x) => `<div class="small"><a href="#/boards/${x.boardId}">내 보드: ${esc(x.name || '이름 없음')}</a>${x.price ? ` <span class="muted">${won(x.price)}</span>` : ''}</div>`).join('')}
+    ${p.searchUrl ? `<a class="small pick-search" href="${esc(p.searchUrl)}" target="_blank" rel="noopener noreferrer">네이버 쇼핑에서 '${esc(t.word)}' 전체 보기&nbsp;↗</a>` : ''}
+  </div>`;
 }
 
 // 추천 제품을 기존 보드나 새 보드에 담습니다.

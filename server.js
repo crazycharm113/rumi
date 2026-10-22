@@ -45,6 +45,8 @@ function publicSettings() {
     age: s.age,
     keywords: s.keywords,
     autoKeywords: s.autoKeywords,
+    titleCategories: s.titleCategories || [],
+    blogCategories: blogCategories(),
     excludedKeywords: s.excludedKeywords,
     brands: s.brands,
     blogId: s.blogId,
@@ -61,6 +63,13 @@ function publicSettings() {
   };
 }
 
+// 내 블로그 글의 카테고리와 글 수 (제목 스타일을 배울 카테고리 고르기용)
+function blogCategories() {
+  const count = {};
+  for (const p of store.load().posts) if (p.category) count[p.category] = (count[p.category] || 0) + 1;
+  return Object.entries(count).sort((a, b) => b[1] - a[1]).map(([name, posts]) => ({ name, posts }));
+}
+
 const cleanList = (list, max) => [...new Set(list.map((k) => String(k).trim()).filter(Boolean))].slice(0, max);
 
 function updateSettings(body) {
@@ -74,6 +83,7 @@ function updateSettings(body) {
     s.keywords = cleanList(body.keywords, 60);
   }
   if (typeof body.autoKeywords === 'boolean') s.autoKeywords = body.autoKeywords;
+  if (Array.isArray(body.titleCategories)) s.titleCategories = cleanList(body.titleCategories, 50);
   if (Array.isArray(body.excludedKeywords)) s.excludedKeywords = cleanList(body.excludedKeywords, 200);
   if (Array.isArray(body.brands)) {
     const brands = cleanList(body.brands, 20);
@@ -289,7 +299,7 @@ const routes = [
     const ids = q.get('products');
     const chosen = ids ? board.products.filter((p) => ids.split(',').includes(p.id)) : board.products;
     const audience = board.keyword ? await service.getAudience(board.keyword) : null;
-    const titles = helper.titleIdeas(board, new Date(), store.load().posts);
+    const titles = helper.titleIdeas(board, new Date(), service.titlePosts(store.load()));
     if (audience && audience.label !== '고르게 분포') titles.splice(Math.min(3, titles.length), 0, `${audience.label} ${board.keyword} 코디 추천`);
     return { table: helper.productTable(chosen), titles: [...new Set(titles)], tags: helper.tagIdeas(board), checklist: helper.checklist(board), audience };
   }],

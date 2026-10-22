@@ -294,3 +294,6 @@ dialog.dlg h2 { margin: 0; }
 .stats > div { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
 .stats b { font-size: 22px; font-variant-numeric: tabular-nums; }
 .post-row h3 .chip, .post-row h3 .chip-btn { font-size: 12px; vertical-align: middle; }
+.picks .pick-review { grid-column: 1 / -1; text-decoration: none; font-size: 13.5px; }
+.picks .pick-review:hover { text-decoration: underline; }
+.picks .pick-search { display: inline-block; margin-top: 8px; }

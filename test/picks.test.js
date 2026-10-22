@@ -24,3 +24,25 @@ test('오늘 올릴 주제는 6개', () => {
   const rows = analyze(Object.fromEntries(words.map((w, i) => [w, { series: series(i), anchorAvg: 20 }])), Object.fromEntries(words.map((w) => [w, 5000])));
   assert.strictEqual(pickTopics(rows, { today: { avg: 15 }, drop: null }).length, 6);
 });
+
+test('추천 제품을 못 찾아도 후기 글을 보여주고, 제목은 실제 추천 제품으로 만듦', () => {
+  const { topReviews, productTitle } = require('../lib/picks');
+  const posts = [
+    { title: '체스터코트 추천 BEST', description: '', link: 'r1' },
+    { title: '코트 고르는 법', description: '체스터코트', link: 'r2' },
+    { title: '여자 체스터코트 코디', description: '', link: 'r3' },
+  ];
+  assert.deepStrictEqual(rankPicks(posts, '체스터코트'), []);
+  assert.deepStrictEqual(topReviews(posts, '체스터코트').map((r) => r.link), ['r1', 'r3']);
+  assert.strictEqual(productTitle('발마칸코트', [{ brand: '무신사', name: '무신사 발마칸코트' }, { brand: '유니클로', name: '유니클로 발마칸코트' }]), '무신사 vs 유니클로 발마칸코트 비교 (가격·핏)');
+  assert.strictEqual(productTitle('코듀로이팬츠', [{ brand: '마시모두띠', name: '마시모두띠 코듀로이팬츠' }]), '마시모두띠 코듀로이팬츠 솔직 후기');
+  assert.strictEqual(productTitle('체스터코트', []), null);
+});
+
+test('제목 스타일은 고른 카테고리의 글에서만 배움', () => {
+  const { titlePosts } = require('../lib/service');
+  const db = { settings: { titleCategories: ['데일리룩'] }, posts: [{ title: 'a', category: '데일리룩' }, { title: 'b', category: '연예인 패션' }] };
+  assert.deepStrictEqual(titlePosts(db).map((p) => p.title), ['a']);
+  db.settings.titleCategories = [];
+  assert.strictEqual(titlePosts(db).length, 2);
+});

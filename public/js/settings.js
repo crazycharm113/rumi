@@ -51,6 +51,8 @@ views.settings = async () => {
         <h2>내 블로그</h2>
         <p class="small muted" style="margin:0">네이버 블로그 아이디나 주소(blog.naver.com/아이디)를 넣으면 성과 기록에서 글 목록을 RSS로 자동으로 가져와요. 비밀번호는 받지 않아요.</p>
         <label class="field">블로그 아이디<input name="blogId" value="${esc(s.blogId)}" placeholder="예: myfashionlog"></label>
+        ${s.blogCategories.length ? `<div class="field">제목 스타일을 배울 카테고리 <span class="muted">(고르지 않으면 전부. 연예인 기사처럼 내 글 스타일이 아닌 카테고리는 빼세요)</span>
+          <div class="row" style="margin-top:4px">${s.blogCategories.map((c) => `<label class="chip-btn ${s.titleCategories.includes(c.name) ? 'on' : ''}"><input type="checkbox" name="titleCategories" value="${esc(c.name)}" ${s.titleCategories.includes(c.name) ? 'checked' : ''} hidden onchange="this.parentElement.classList.toggle('on', this.checked)">${esc(c.name)} ${c.posts}</label>`).join('')}</div></div>` : ''}
       </section>
 
       <section class="card grid">
@@ -102,6 +104,7 @@ views.settings = async () => {
     body.keywords = body.keywords.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     body.excludedKeywords = body.excludedKeywords.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     body.autoKeywords = f.get('autoKeywords') === 'on';
+    body.titleCategories = f.getAll('titleCategories');
     body.brands = body.brands.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     try {
       await api('/api/settings', { method: 'PUT', body });
