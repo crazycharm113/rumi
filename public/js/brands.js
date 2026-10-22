@@ -20,8 +20,8 @@ views.brands = async () => {
         <h2>${esc(name)}</h2>
         ${b.error ? `<p class="chip down">${esc(b.error)}</p>` : ''}
         <div class="grid grid-2">
-          <div><div class="sub-head">세일·할인 소식 ${b.sale.length}</div>${newsList(b.sale, name, 'sale')}</div>
-          <div><div class="sub-head">신상 소식 ${b.launch.length}</div>${newsList(b.launch, name, 'launch')}</div>
+          <div><div class="sub-head">세일·할인 소식 ${(b.sale || []).length}</div>${newsList(b.sale || [], name, 'sale')}</div>
+          <div><div class="sub-head">신상 소식 ${(b.launch || []).length}</div>${newsList(b.launch || [], name, 'launch')}</div>
         </div>
       </section>`).join('')}
     <p class="small muted section">네이버 쇼핑 검색 API가 2026년 7월 31일 종료되어, 상품 가격 대신 블로그에 올라온 소식을 보여드려요. 실제 세일 기간과 가격은 브랜드 공식몰에서 확인하세요.
