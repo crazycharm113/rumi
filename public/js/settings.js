@@ -68,6 +68,8 @@ views.settings = async () => {
       <div class="row">
         <button class="btn primary">저장</button>
         <button class="btn" type="button" onclick="refreshAll()">저장한 데이터 비우고 새로 가져오기</button>
+        <span class="spacer"></span>
+        <button class="btn danger" type="button" onclick="shutdownApp()">프로그램 끄기</button>
       </div>
     </form>`;
 
@@ -86,3 +88,9 @@ views.settings = async () => {
   });
 };
 
+
+async function shutdownApp() {
+  if (!confirm('블로그 작업대를 끌까요? 다시 쓰려면 "블로그 작업대.vbs"를 실행하세요.')) return;
+  await api('/api/shutdown', { method: 'POST' }).catch(() => {});
+  $app.innerHTML = '<h1>프로그램을 껐어요</h1><div class="card"><p>이 창을 닫아도 돼요. 다시 쓰려면 폴더의 <b>블로그 작업대.vbs</b>를 실행하세요.</p></div>';
+}

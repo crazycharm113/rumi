@@ -192,6 +192,11 @@ const routes = [
   }],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
   ['POST', /^\/api\/refresh$/, () => { store.clearCache(); return { ok: true }; }],
+  ['POST', /^\/api\/shutdown$/, () => {
+    // 창 없이 실행했을 때 끄는 방법. 응답을 보낸 뒤 저장하고 종료합니다.
+    setTimeout(() => { store.save(); process.exit(0); }, 200);
+    return { ok: true };
+  }],
 
   // 상품 보드
   ['GET', /^\/api\/boards$/, () => store.load().boards],
