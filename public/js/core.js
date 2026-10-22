@@ -64,6 +64,9 @@ function dataBanner(meta, what) {
   if (meta.demo) {
     return `<div class="banner demo">지금 보이는 ${what}는 <b>예시 데이터</b>입니다. <a href="#/settings">설정</a>에서 API 키를 넣으면 실제 데이터로 바뀝니다.</div>`;
   }
+  if (meta.failed) {
+    return `<div class="banner stale">네이버 데이터를 가져오지 못했어요: ${esc(meta.error || '')} <a href="#/settings">설정 확인</a></div>`;
+  }
   if (meta.stale) {
     return `<div class="banner stale">새 데이터를 가져오지 못해 마지막 데이터(${esc(timeText(meta.fetchedAt))})를 보여줍니다. ${esc(meta.error || '')}</div>`;
   }
