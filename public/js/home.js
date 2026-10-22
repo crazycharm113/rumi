@@ -14,10 +14,10 @@ views.home = async () => {
 
     <section class="section">
       <div class="section-head"><h2>오늘 올릴 주제 6개</h2>
-        <span class="small muted">${esc(b.ageLabel)} 기준 · 기회 점수는 참고용${b.topics[0]?.titleSource === 'noblog' ? ' · <a href="#/settings">블로그 아이디</a>를 넣으면 내 제목 스타일로 추천해요' : ''}</span></div>
-      <div class="grid grid-3">
-        ${b.topics.length ? b.topics.map(topicCard).join('') : `<div class="card empty">추천할 주제가 없습니다. <a href="#/settings">키워드</a>를 더 추가해 보세요.</div>`}
+        <div class="subtabs" role="tablist" aria-label="연령대">${TOPIC_AGES.map(([v, l]) => `<button role="tab" data-age="${v}" class="${v === topicAge(b.age) ? 'on' : ''}">${l}</button>`).join('')}</div>
       </div>
+      <p class="small muted" id="topicsNote" style="margin:-4px 0 10px">${topicsNote(b.ageLabel, b.topics)}</p>
+      <div class="grid grid-3" id="topicsGrid">${topicsGrid(b.topics)}</div>
     </section>
 
     <div class="grid grid-2 section">
@@ -58,7 +58,36 @@ views.home = async () => {
     <p class="small muted section">키워드 갱신: ${esc(timeText(b.keywordsMeta.fetchedAt) || '예시')} ·
       <button class="btn ghost sm" onclick="refreshAll()">지금 새로 가져오기</button></p>
   `;
+  bindTopicTabs();
 };
+
+// ---- 연령대별 오늘 올릴 주제 ----
+const TOPIC_AGES = [['all', '전체'], ['10', '10대'], ['20', '20대'], ['30', '30대'], ['40', '40대']];
+const topicAge = (age) => (TOPIC_AGES.some(([v]) => v === age) ? age : 'all');
+
+function topicsGrid(topics) {
+  return topics.length ? topics.map(topicCard).join('') : `<div class="card empty">추천할 주제가 없습니다. <a href="#/settings">키워드</a>를 더 추가해 보세요.</div>`;
+}
+
+function topicsNote(ageLabel, topics) {
+  return `${esc(ageLabel)} 검색·쇼핑 기준 · 기회 점수는 참고용${topics[0]?.titleSource === 'noblog' ? ' · <a href="#/settings">블로그 아이디</a>를 넣으면 내 제목 스타일로 추천해요' : ''}`;
+}
+
+// 연령 버튼: 그 연령의 검색·쇼핑 데이터로 주제 6개를 다시 고릅니다(연령마다 하루 한 번 받아 저장).
+function bindTopicTabs() {
+  $app.querySelectorAll('[data-age]').forEach((btn) => btn.addEventListener('click', async () => {
+    $app.querySelectorAll('[data-age]').forEach((x) => x.classList.toggle('on', x === btn));
+    const grid = document.getElementById('topicsGrid');
+    grid.innerHTML = `<div class="card empty" style="grid-column:1/-1">${esc(btn.textContent)} 주제를 고르는 중… (처음 볼 때는 몇 초 걸려요)</div>`;
+    try {
+      const r = await api(`/api/topics?age=${btn.dataset.age}`);
+      grid.innerHTML = topicsGrid(r.topics);
+      document.getElementById('topicsNote').innerHTML = topicsNote(r.ageLabel, r.topics);
+    } catch (err) {
+      grid.innerHTML = `<div class="card empty" style="grid-column:1/-1">주제를 가져오지 못했어요: ${esc(err.message)}</div>`;
+    }
+  }));
+}
 
 function weatherBar(w) {
   if (!w || w.error && !w.today) return `<div class="weather"><span class="muted">날씨를 가져오지 못했습니다. ${esc(w?.error || '')}</span></div>`;
@@ -105,7 +134,7 @@ function audienceChip(a) {
   const parts = [];
   if (a.female != null) parts.push(`여성 ${a.female}%`);
   if (a.topAge) parts.push(`${a.topAge.label} ${a.topAge.share}%`);
-  return `<span class="chip target" title="네이버 쇼핑 클릭 기준">👤 ${esc(a.label)} 중심${parts.length ? ` (${esc(parts.join(', '))})` : ''}</span>`;
+  return `<span class="chip target" title="최근 30일 네이버 쇼핑 클릭 기준 (전체 연령)">👤 클릭 ${esc(a.label)} 중심${parts.length ? ` (${esc(parts.join(', '))})` : ''}</span>`;
 }
 
 // 주제별 추천 제품: 블로거들이 많이 언급한 제품 + 내 보드에 담아 둔 같은 종류 상품

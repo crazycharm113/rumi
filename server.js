@@ -198,6 +198,7 @@ const routes = [
     const r = await service.getKeywordRows({ force: q.get('refresh') === '1' });
     return { ...r, ageLabel: AGE_GROUPS[r.age].label };
   }],
+  ['GET', /^\/api\/topics$/, (m, b, q) => service.getTopics(q.get('age') || 'all')],
   ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
   ['POST', /^\/api\/refresh$/, () => { store.clearCache(); return { ok: true }; }],

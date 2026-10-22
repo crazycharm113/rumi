@@ -35,3 +35,11 @@ test('내 블로그 제목 스타일로 3개, 같은 틀은 한 번만', () => {
   ]);
   assert.deepStrictEqual(personalTitles('경량패딩', [], { month: 10 }), []);
 });
+
+test('다른 낱말에 붙은 아이템 이름은 바꾸지 않음', () => {
+  const words = ['원피스', '자켓', '니트'];
+  assert.strictEqual(toTemplate('웨딩화보 속 미니원피스 정체', words), null);
+  assert.strictEqual(toTemplate('화제된 트위드자켓 패션', words), null);
+  assert.strictEqual(toTemplate('니트로 완성한 가을 코디', words), '{kw}로 완성한 {season} 코디');
+  assert.strictEqual(toTemplate('출근룩 [니트] 추천', words), '출근룩 [{kw}] 추천');
+});
