@@ -57,7 +57,7 @@ views.settings = async () => {
         <h2>키워드</h2>
         <label class="row" style="gap:8px"><input type="checkbox" name="autoKeywords" ${s.autoKeywords ? 'checked' : ''} style="width:auto">
           <b>키워드 자동 관리 (추천)</b></label>
-        <p class="small muted" style="margin:0">패션 아이템 사전(약 110개)을 매일 네이버 쇼핑 클릭으로 훑어, 요즘 오르면서 오늘 기온에 맞는 아이템 20개를 자동으로 골라 분석해요. 키워드를 직접 바꾸지 않아도 돼요. (네이버 API 키와 쇼핑인사이트가 필요해요)</p>
+        <p class="small muted" style="margin:0">패션 아이템 사전(약 100개)을 매일 네이버 쇼핑 클릭으로 훑어, 요즘 오르면서 오늘 기온에 맞는 아이템 20개를 자동으로 골라 분석해요. 키워드를 직접 바꾸지 않아도 돼요. (네이버 API 키와 쇼핑인사이트가 필요해요)</p>
         <div class="grid grid-2">
           <label class="field">꼭 포함할 키워드 (한 줄에 하나, 비워 둬도 돼요)<textarea name="keywords" rows="8">${esc(s.keywords.join('\n'))}</textarea></label>
           <label class="field">제외할 키워드 (추천에서 빼고 싶은 것)<textarea name="excludedKeywords" rows="8" placeholder="예: 수영복">${esc(s.excludedKeywords.join('\n'))}</textarea></label>
