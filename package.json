@@ -1,0 +1,12 @@
+{
+  "name": "fashion-blog-helper",
+  "version": "0.1.0",
+  "description": "패션 블로거 작업 도우미 (1단계: 오늘의 브리핑, 키워드 기회 분석, 상품 보드)",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=18" }
+}
