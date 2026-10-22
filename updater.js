@@ -34,7 +34,7 @@ function headers(accept) {
 async function latestSha() {
   const res = await fetch(`https://api.github.com/repos/${REPO}/commits/${BRANCH}`, { headers: headers('application/vnd.github.sha'), signal: AbortSignal.timeout(8000) });
   if (res.status === 404) throw new Error('저장소를 찾을 수 없어요. 비공개 저장소라면 GITHUB_TOKEN이 필요해요.');
-  if (res.status === 401) throw new Error('GITHUB_TOKEN이 올바르지 않아요.');
+  if (res.status === 401) throw new Error(token() ? 'GitHub 토큰이 올바르지 않아요.' : '비공개 저장소라 GitHub 토큰이 필요해요.');
   if (!res.ok) throw new Error(`GitHub 응답 ${res.status}`);
   return (await res.text()).trim();
 }
