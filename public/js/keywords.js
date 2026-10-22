@@ -52,6 +52,7 @@ function scoreTable(rows, focus) {
       <p><b>기회 점수 = 관심도 변화 지수 ÷ log<sub>10</sub>(블로그 글 수 + 10)</b></p>
       <ul>
         <li><b>관심도 변화 지수</b>: 네이버 데이터랩 검색어트렌드에서 최근 7일 평균 ÷ 그 전 7일 평균 × 100 (100이면 변화 없음).</li>
+        <li><b>글 수 전일 대비</b>: 블로그 글 수를 날마다 기록해 어제 기록과 비교한 증가 건수. 하루 이상 비어 있으면 가장 최근 기록과 비교하고 (n일)로 표시합니다. 많이 늘수록 다른 블로거들도 지금 쓰고 있다는 뜻이에요.</li>
         <li><b>블로그 글 수</b>: 네이버 블로그 검색 결과 총 건수(근사치). 글이 10배 많으면 점수가 한 단계 내려가도록 로그를 썼습니다.</li>
         <li><b>쇼핑 클릭 변화</b>: 네이버 쇼핑인사이트에서 최근 7일 클릭 ÷ 그 전 7일. 있으면 관심도 변화 지수를 '검색 지수와 클릭 지수의 평균'으로 계산해 구매 관심을 반영합니다.
           <span class="chip buy">구매</span> 검색·클릭이 함께 오름 → 제품 추천·비교 글, <span class="chip info">정보</span> 검색만 오름 → 코디·스타일링 글.</li>
@@ -67,6 +68,7 @@ function scoreTable(rows, focus) {
         ${head('shopChange', '쇼핑 클릭 변화', 'num')}
         ${head('level', '관심 수준', 'num')}
         ${head('posts', '블로그 글 수', 'num')}
+        ${head('postsDelta', '글 수 전일 대비', 'num')}
         ${head('score', '기회 점수')}
         <th></th>
       </tr></thead>
@@ -75,9 +77,12 @@ function scoreTable(rows, focus) {
         <td>${spark(r.spark)}</td>
         <td class="num"><span class="pct ${r.change > 0 ? 'up' : r.change < 0 ? 'down' : ''}">${signed(r.change)}%</span></td>
         <td class="num">${r.shopChange == null ? '<span class="muted">–</span>' : `<span class="pct ${r.shopChange > 0 ? 'up' : r.shopChange < 0 ? 'down' : ''}">${signed(r.shopChange)}%</span>`}
-          ${r.intent === 'buy' ? ' <span class="chip buy">구매</span>' : r.intent === 'info' ? ' <span class="chip info">정보</span>' : ''}</td>
+          <span class="intent-slot">${r.intent === 'buy' ? '<span class="chip buy">구매</span>' : r.intent === 'info' ? '<span class="chip info">정보</span>' : ''}</span></td>
         <td class="num">${r.level}</td>
         <td class="num">${num(r.posts)}</td>
+        <td class="num" ${r.postsDeltaDays > 1 ? `title="${r.postsDeltaDays}일 전 기록과 비교"` : ''}>${r.postsDelta == null
+          ? '<span class="muted" title="오늘부터 기록해서 내일부터 보여요">–</span>'
+          : `<span class="pct ${r.postsDelta > 0 ? 'up' : r.postsDelta < 0 ? 'down' : ''}">${r.postsDelta > 0 ? '+' : ''}${num(r.postsDelta)}</span>${r.postsDeltaDays > 1 ? `<span class="small muted"> (${r.postsDeltaDays}일)</span>` : ''}`}</td>
         <td><span class="bar" style="width:${Math.round(((r.score || 0) / maxScore) * 90)}px"></span><span class="score">${r.score ?? '–'}</span></td>
         <td><button class="btn sm" data-word="${esc(r.word)}" onclick="makeBoard(this.dataset.word, this.dataset.word + ' 코디')">보드 만들기</button></td>
       </tr>`).join('')}</tbody>

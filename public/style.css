@@ -288,3 +288,4 @@ dialog.dlg h2 { margin: 0; }
 .cal-item.peak { background: #fff1d6; color: #8a5a00; }
 .cal-item.prepare { background: var(--accent); color: #fff; border: 0; cursor: pointer; font: inherit; font-size: 12px; text-align: left; width: 100%; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cal-item.peak { background: #3a2f17; color: #e9b955; } }
+.intent-slot { display: inline-block; width: 44px; text-align: left; margin-left: 4px; }
