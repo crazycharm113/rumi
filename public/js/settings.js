@@ -16,7 +16,19 @@ views.settings = async () => {
 
       <section class="card grid">
         <h2>네이버 API ${s.hasNaver ? '<span class="chip up">연결됨</span>' : '<span class="chip warn">미설정 · 예시 데이터 사용 중</span>'}</h2>
-        <p class="small muted" style="margin:0">네이버 개발자센터(developers.naver.com) → 애플리케이션 등록 → 사용 API에 <b>데이터랩(검색어트렌드)</b>과 <b>검색</b>을 추가하면 Client ID와 Secret이 나옵니다.</p>
+        <div class="small muted" style="margin:0">
+          <p style="margin:0 0 6px"><b>2026년 7월 31일부터 새 키는 NAVER API HUB에서 받아요.</b> 네이버 개발자센터에서는 더 이상 새로 신청할 수 없어요.</p>
+          <ol style="margin:0;padding-left:18px">
+            <li>네이버 클라우드 플랫폼(ncloud.com)에 가입·로그인</li>
+            <li>콘솔에서 <b>NAVER API HUB</b> 이용 신청 → Application 등록</li>
+            <li>사용할 API로 <b>Search Trend(검색어 트렌드)</b>와 <b>검색 - 블로그</b>를 선택</li>
+            <li>발급된 Client ID와 Client Secret을 아래에 붙여넣기</li>
+          </ol>
+        </div>
+        <label class="field">키 종류<select name="naverKeyType">
+          <option value="hub" ${s.naverKeyType !== 'legacy' ? 'selected' : ''}>NAVER API HUB 키 (새로 받는 키)</option>
+          <option value="legacy" ${s.naverKeyType === 'legacy' ? 'selected' : ''}>개발자센터 기존 키 (2026년 7월 이전 발급분)</option>
+        </select></label>
         <div class="grid grid-2">
           <label class="field">Client ID<input name="naverClientId" value="${esc(s.naverClientId)}" autocomplete="off"></label>
           <label class="field">Client Secret<input name="naverClientSecret" type="password" value="${esc(s.naverClientSecret)}" autocomplete="off"></label>
@@ -31,7 +43,7 @@ views.settings = async () => {
 
       <section class="card grid">
         <h2>관심 브랜드</h2>
-        <p class="small muted" style="margin:0">한 줄에 하나씩. 네이버 쇼핑 검색으로 하루 한 번 할인·신상을 모아요(최대 20개). 예: 탑텐, 무신사 스탠다드, 자라</p>
+        <p class="small muted" style="margin:0">한 줄에 하나씩. 블로그 검색으로 하루 한 번 '브랜드 + 세일/신상' 최근 글을 모아요(최대 20개). 예: 탑텐, 무신사 스탠다드, 자라</p>
         <textarea name="brands" rows="4" placeholder="탑텐&#10;무신사 스탠다드&#10;자라">${esc(s.brands.join('\n'))}</textarea>
       </section>
 
@@ -43,7 +55,7 @@ views.settings = async () => {
 
       <section class="card grid">
         <h2>지켜볼 키워드</h2>
-        <p class="small muted" style="margin:0">한 줄에 하나씩. 네이버 데이터랩은 하루 1,000번까지 부를 수 있고, 키워드 4개당 1번씩 씁니다(하루 한 번 저장해 두고 재사용).</p>
+        <p class="small muted" style="margin:0">한 줄에 하나씩. 검색어 트렌드는 키워드 4개당 1번씩 부르고, 하루 한 번 저장해 두고 재사용해요.</p>
         <textarea name="keywords" rows="10">${esc(s.keywords.join('\n'))}</textarea>
       </section>
 

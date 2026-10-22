@@ -1,23 +1,34 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { classify } = require('../lib/shopping');
+const { pickPosts, markNew } = require('../lib/brandnews');
+const naver = require('../lib/naver');
 const { diff } = require('../lib/alerts');
 const calendar = require('../lib/calendar');
 const helper = require('../lib/helper');
 const perf = require('../lib/performance');
 
-const item = (id, price, recent = false) => ({ id, brand: '탑텐', title: `상품${id}`, price, recent });
+test('네이버 API: 새 HUB 키와 기존 개발자센터 키의 주소·헤더', () => {
+  const hub = { naverClientId: 'id', naverClientSecret: 'sec', naverKeyType: 'hub' };
+  const legacy = { ...hub, naverKeyType: 'legacy' };
+  assert.strictEqual(naver.endpoint(hub, 'trend'), 'https://naverapihub.apigw.ntruss.com/search-trend/v1/search');
+  assert.strictEqual(naver.endpoint(hub, 'blog', '?query=a'), 'https://naverapihub.apigw.ntruss.com/search/v1/blog?query=a');
+  assert.strictEqual(naver.endpoint(legacy, 'trend'), 'https://openapi.naver.com/v1/datalab/search');
+  assert.strictEqual(naver.headers(hub)['X-NCP-APIGW-API-KEY-ID'], 'id');
+  assert.strictEqual(naver.headers(hub)['X-NCP-APIGW-API-KEY'], 'sec');
+  assert.strictEqual(naver.headers(legacy)['X-Naver-Client-Id'], 'id');
+});
 
-test('브랜드 피드: 첫날은 기준만, 다음 날 가격 하락은 할인·새 상품은 신상', () => {
-  const h = {};
-  let r = classify([item('a', 50000, true), item('b', 30000)], h, '2026-10-20', true);
-  assert.deepStrictEqual([r.sales.length, r.launches.length], [0, 0]);
-  r = classify([item('a', 40000, true), item('b', 29500), item('c', 19000, true)], h, '2026-10-21', false);
-  assert.strictEqual(r.sales.length, 1);            // b는 1.7% 하락이라 제외
-  assert.strictEqual(r.sales[0].pct, 20);
-  assert.deepStrictEqual(r.launches.map((x) => x.id), ['c']);
-  r = classify([item('c', 19000, true)], h, '2026-10-26', false);
-  assert.strictEqual(r.launches.length, 0);         // 3일 지나면 신상 아님
+test('브랜드 소식: 브랜드+주제어가 함께 나오는 최근 글만, 새 글 표시', () => {
+  const posts = [
+    { title: '탑텐 가을 세일 후기', description: '', link: 'a', postdate: '20261020' },
+    { title: '세일 정보 모음', description: '여러 브랜드', link: 'b', postdate: '20261021' },
+    { title: '탑텐 코디', description: '할인 받아서 샀어요', link: 'c', postdate: '20261021' },
+    { title: '탑텐 세일', description: '', link: 'd', postdate: '20260901' },
+  ];
+  const picked = pickPosts(posts, '탑텐', ['세일', '할인'], '2026-10-08');
+  assert.deepStrictEqual(picked.map((p) => p.link), ['c', 'a']);
+  assert.strictEqual(picked[0].date, '2026-10-21');
+  assert.deepStrictEqual(markNew(picked, new Set(['a'])).map((p) => p.isNew), [true, false]);
 });
 
 test('저장 상품 알림: 가격 하락, 발행한 글 상품 품절, 재입고', () => {

@@ -13,7 +13,7 @@ const alerts = require('./lib/alerts');
 const calendar = require('./lib/calendar');
 const helper = require('./lib/helper');
 const perf = require('./lib/performance');
-const shopping = require('./lib/shopping');
+const brandnews = require('./lib/brandnews');
 const scheduler = require('./lib/scheduler');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -45,6 +45,7 @@ function publicSettings() {
     keywords: s.keywords,
     brands: s.brands,
     blogId: s.blogId,
+    naverKeyType: s.naverKeyType,
     naverClientId: s.naverClientId ? MASK : '',
     naverClientSecret: s.naverClientSecret ? MASK : '',
     kmaServiceKey: s.kmaServiceKey ? MASK : '',
@@ -63,6 +64,7 @@ function updateSettings(body) {
   const s = db.settings;
   if (body.region && REGIONS[body.region]) s.region = body.region;
   if (body.age && AGE_GROUPS[body.age]) s.age = body.age;
+  if (['hub', 'legacy'].includes(body.naverKeyType)) s.naverKeyType = body.naverKeyType;
   if (Array.isArray(body.keywords)) {
     const words = cleanList(body.keywords, 60);
     if (words.length) s.keywords = words;
@@ -280,7 +282,7 @@ const routes = [
   ['GET', /^\/api\/brand-feed$/, () => service.getBrandFeed()],
   ['POST', /^\/api\/brand-feed\/refresh$/, async () => {
     if (!service.hasNaver(store.load().settings)) throw httpError(400, '네이버 API 키가 필요합니다.');
-    await shopping.refreshBrandFeed();
+    await brandnews.refreshBrandFeed();
     store.load().jobs.brandFeed = new Date().toISOString();
     store.save();
     return service.getBrandFeed();

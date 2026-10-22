@@ -5,8 +5,8 @@ views.brands = async () => {
   const brands = Object.entries(f.brands || {});
   $app.innerHTML = `
     <h1>할인·신상</h1>
-    <p class="lede">관심 브랜드에서 가격이 내려간 상품과 새로 올라온 상품입니다. 마음에 들면 바로 상품 보드에 담으세요.</p>
-    ${f.demo ? dataBanner(f, '할인·신상') : ''}
+    <p class="lede">관심 브랜드의 세일·신상 소식을 최근 2주 블로그 글에서 모았어요. 세일 기간을 확인하면 캘린더에 넣어 두세요.</p>
+    ${f.demo ? dataBanner(f, '할인·신상 소식') : ''}
     ${!f.brandsSet && !f.demo ? `<div class="card empty">관심 브랜드를 <a href="#/settings">설정</a>에 넣어 주세요. 예: 탑텐, 무신사 스탠다드, 자라</div>` : ''}
     ${f.error ? `<div class="banner stale">${esc(f.error)}</div>` : ''}
     <div class="row section">
@@ -17,24 +17,32 @@ views.brands = async () => {
     ${f.pending ? '<div class="card empty">처음 가져오는 중이에요. 잠시 뒤 새로고침해 주세요.</div>' : ''}
     ${brands.map(([name, b]) => `
       <section class="section card">
-        <div class="section-head"><h2>${esc(name)}</h2>
-          ${b.baseline ? '<span class="small muted">오늘부터 가격을 기록해요. 할인은 내일부터, 신상은 다음 갱신부터 보여요.</span>' : ''}</div>
+        <h2>${esc(name)}</h2>
         ${b.error ? `<p class="chip down">${esc(b.error)}</p>` : ''}
         <div class="grid grid-2">
-          <div><div class="sub-head">가격 내려감 ${b.sales.length}</div>
-            ${b.sales.length ? `<ul class="mini-products">${b.sales.slice(0, 10).map((x) => miniProduct({ ...x, tag: `${x.pct}%↓` })).join('')}</ul>` : '<p class="muted small">최근 14일 가격보다 5% 이상 내려간 상품이 없어요.</p>'}</div>
-          <div><div class="sub-head">신상 ${b.launches.length}</div>
-            ${b.launches.length ? `<ul class="mini-products">${b.launches.slice(0, 10).map((x) => miniProduct({ ...x, tag: '신상' })).join('')}</ul>`
-              : b.recent?.length ? `<p class="muted small">새로 보인 상품은 없어요. 최근 등록순 상품:</p><ul class="mini-products">${b.recent.slice(0, 5).map((x) => miniProduct({ ...x, tag: '최근' })).join('')}</ul>` : '<p class="muted small">새로 보인 상품이 없어요.</p>'}</div>
+          <div><div class="sub-head">세일·할인 소식 ${b.sale.length}</div>${newsList(b.sale, name, 'sale')}</div>
+          <div><div class="sub-head">신상 소식 ${b.launch.length}</div>${newsList(b.launch, name, 'launch')}</div>
         </div>
       </section>`).join('')}
-    <p class="small muted section">네이버 쇼핑 검색 결과 기준입니다. 쇼핑몰에 따라 실제 판매가와 다를 수 있어요. 세일 기간은 <a href="#/calendar">캘린더</a>에 직접 넣을 수 있어요.</p>`;
+    <p class="small muted section">네이버 쇼핑 검색 API가 2026년 7월 31일 종료되어, 상품 가격 대신 블로그에 올라온 소식을 보여드려요. 실제 세일 기간과 가격은 브랜드 공식몰에서 확인하세요.
+      상품을 상품 보드에 담으면 그 상품의 가격·품절은 따로 지켜봐요.</p>`;
   document.getElementById('refreshFeed')?.addEventListener('click', async (e) => {
     e.target.disabled = true; e.target.textContent = '가져오는 중…';
     try { await api('/api/brand-feed/refresh', { method: 'POST' }); } catch (err) { toast(err.message); }
     route();
   });
 };
+
+function newsList(list, brand, type) {
+  if (!list.length) return '<p class="muted small">최근 2주 동안 올라온 글이 없어요.</p>';
+  return `<ul class="news">${list.map((p) => `<li>
+    <div class="grow">
+      <a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer">${p.isNew ? '<b class="tag-new">NEW</b> ' : ''}${esc(p.title)}</a>
+      <div class="small muted">${esc(p.date ? mmdd(p.date) : '')}</div>
+    </div>
+    <button class="btn ghost sm" data-ev='${esc(JSON.stringify({ type, brand, title: `${brand} ${type === 'sale' ? '세일' : '신상 출시'}` }))}' onclick="editEvent(JSON.parse(this.dataset.ev))">캘린더에 넣기</button>
+  </li>`).join('')}</ul>`;
+}
 
 views.alerts = async () => {
   loading();

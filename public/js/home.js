@@ -102,36 +102,17 @@ function risingRow(r) {
 }
 
 function brandFeedSummary(f) {
-  if (!f.brandsSet && !f.demo) return `<p class="muted small">관심 브랜드를 <a href="#/settings">설정</a>에 넣으면 할인·신상을 모아 드려요.</p>`;
-  if (f.pending) return `<p class="muted small">관심 브랜드 상품을 가져오는 중이에요. 잠시 뒤 새로고침해 주세요.</p>`;
-  const all = Object.values(f.brands || {});
-  const sales = all.flatMap((x) => x.sales || []).sort((a, b) => b.pct - a.pct).slice(0, 3);
-  const launches = all.flatMap((x) => x.launches || []).slice(0, 3);
-  if (!sales.length && !launches.length) return `<p class="muted small">오늘은 새로 내려간 가격이나 신상이 없어요. 가격 기록이 쌓일수록 정확해져요.</p>`;
+  if (!f.brandsSet && !f.demo) return `<p class="muted small">관심 브랜드를 <a href="#/settings">설정</a>에 넣으면 세일·신상 소식을 모아 드려요.</p>`;
+  if (f.pending) return `<p class="muted small">관심 브랜드 소식을 가져오는 중이에요. 잠시 뒤 새로고침해 주세요.</p>`;
+  const items = Object.entries(f.brands || {}).flatMap(([brand, b]) => [
+    ...(b.sale || []).map((p) => ({ ...p, brand, tag: '세일' })),
+    ...(b.launch || []).map((p) => ({ ...p, brand, tag: '신상' })),
+  ]).sort((x, y) => (y.isNew - x.isNew) || (y.date || '').localeCompare(x.date || '')).slice(0, 6);
+  if (!items.length) return `<p class="muted small">최근 2주 동안 관심 브랜드의 세일·신상 소식이 없어요.</p>`;
   return `${f.demo ? '<p class="chip warn" style="margin:0 0 8px">예시 데이터</p>' : ''}
-    <ul class="mini-products">${[...sales.map((x) => ({ ...x, tag: `${x.pct}%↓` })), ...launches.map((x) => ({ ...x, tag: '신상' }))].map(miniProduct).join('')}</ul>`;
-}
-
-function miniProduct(x) {
-  return `<li>
-    ${x.image ? `<img src="${esc(x.image)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : '<span class="ph"></span>'}
-    <div class="grow"><div class="small muted">${esc(x.brand)}</div><div class="clip">${esc(x.title)}</div>
-      <div class="small"><b class="${x.tag === '신상' ? 'tag-new' : 'tag-sale'}">${esc(x.tag)}</b> ${won(x.price)} ${x.before ? `<s class="muted">${won(x.before)}</s>` : ''}</div></div>
-    <button class="btn sm" data-x='${esc(JSON.stringify({ url: x.link, name: x.title, brand: x.brand, price: x.price, originalPrice: x.before || null, image: x.image }))}' onclick="addToBoard(JSON.parse(this.dataset.x))">보드에 담기</button>
-  </li>`;
-}
-
-// 할인·신상 상품을 기존 보드나 새 보드에 담습니다.
-async function addToBoard(product) {
-  const boards = await api('/api/boards');
-  const r = await dialog('상품 보드에 담기', [
-    { name: 'board', label: '어느 글에 담을까요?', value: boards[0]?.id || 'new', options: [...boards.map((b) => ({ value: b.id, label: b.title })), { value: 'new', label: '+ 새 보드 만들기' }] },
-  ], { submit: '담기' });
-  if (!r) return;
-  let id = r.board;
-  if (id === 'new') id = (await api('/api/boards', { method: 'POST', body: { title: `${product.brand} ${product.originalPrice ? '할인' : '신상'} 소식` } })).id;
-  await api(`/api/boards/${id}/products`, { method: 'POST', body: product });
-  toast('보드에 담았어요');
+    <ul class="news">${items.map((p) => `<li><div class="grow">
+      <div class="small muted">${esc(p.brand)} · <b class="${p.tag === '세일' ? 'tag-sale' : 'tag-new'}">${p.tag}</b> · ${esc(mmdd(p.date))}${p.isNew ? ' · <b class="tag-new">NEW</b>' : ''}</div>
+      <a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer" class="clip" style="display:block">${esc(p.title)}</a></div></li>`).join('')}</ul>`;
 }
 
 const ALERT_ICON = { price_drop: '⬇️', price_up: '⬆️', sold_out: '⛔', fix_post: '✏️', restock: '🔄' };

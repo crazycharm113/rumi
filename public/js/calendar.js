@@ -61,13 +61,14 @@ function calCell(it) {
 }
 
 async function editEvent(e = null) {
-  const r = await dialog(e ? '일정 수정' : '세일·신상 일정 추가', [
+  const editing = Boolean(e?.id);
+  const r = await dialog(editing ? '일정 수정' : '세일·신상 일정 추가', [
     { name: 'type', label: '종류', value: e?.type || 'sale', options: [{ value: 'sale', label: '세일' }, { value: 'launch', label: '신상 출시' }, { value: 'etc', label: '기타' }] },
     { name: 'title', label: '이름', value: e?.title || '', required: true },
     { name: 'brand', label: '브랜드 (선택)', value: e?.brand || '' },
     { name: 'start', label: '시작일', type: 'date', value: e?.start || kstDate(), required: true },
     { name: 'end', label: '종료일 (선택)', type: 'date', value: e?.end || '' },
-  ], { extra: e ? `<button class="btn danger sm" value="delete" formnovalidate style="justify-self:start">이 일정 삭제</button>` : '' });
+  ], { extra: editing ? `<button class="btn danger sm" value="delete" formnovalidate style="justify-self:start">이 일정 삭제</button>` : '' });
   if (!r) return;
   if (r._action === 'delete') {
     if (confirm('이 일정을 삭제할까요?')) {
@@ -76,7 +77,7 @@ async function editEvent(e = null) {
     }
     return;
   }
-  if (e) await api(`/api/events/${e.id}`, { method: 'PUT', body: r });
+  if (editing) await api(`/api/events/${e.id}`, { method: 'PUT', body: r });
   else await api('/api/events', { method: 'POST', body: r });
   toast('저장했어요');
   route();

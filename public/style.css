@@ -192,9 +192,6 @@ ul.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .tag-sale { color: var(--down); }
 .tag-new { color: var(--accent); }
 
-.mini-products { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.mini-products li { display: flex; gap: 10px; align-items: center; }
-.mini-products img, .mini-products .ph { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--surface-2); flex: none; }
 
 .alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .alert-list li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; }
@@ -272,3 +269,7 @@ dialog.dlg h2 { margin: 0; }
 }
 .checklist label.row { flex-wrap: nowrap; align-items: flex-start; }
 .checklist label.row input { margin-top: 4px; flex: none; }
+.news { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.news li { display: flex; gap: 10px; align-items: flex-start; }
+.news a { text-decoration: none; }
+.news a:hover { text-decoration: underline; }
