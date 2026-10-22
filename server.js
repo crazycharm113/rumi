@@ -49,6 +49,7 @@ function publicSettings() {
     naverClientId: s.naverClientId ? MASK : '',
     naverClientSecret: s.naverClientSecret ? MASK : '',
     kmaServiceKey: s.kmaServiceKey ? MASK : '',
+    githubToken: s.githubToken ? MASK : '',
     hasNaver: service.hasNaver(s),
     hasKma: Boolean(s.kmaServiceKey),
     regions: Object.keys(REGIONS),
@@ -79,7 +80,7 @@ function updateSettings(body) {
     if (id !== s.blogId) delete db.jobs.rss;
     s.blogId = id;
   }
-  for (const key of ['naverClientId', 'naverClientSecret', 'kmaServiceKey']) {
+  for (const key of ['naverClientId', 'naverClientSecret', 'kmaServiceKey', 'githubToken']) {
     if (typeof body[key] === 'string' && body[key] !== MASK) s[key] = body[key].trim();
   }
   store.save();
@@ -401,11 +402,15 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-if (require.main === module) {
+function start(onReady) {
   server.listen(PORT, HOST, () => {
-    console.log(`패션 블로거 작업 도우미가 열렸습니다 → http://localhost:${PORT}`);
+    const url = `http://localhost:${PORT}`;
+    console.log(`패션 블로거 작업 도우미가 열렸습니다 → ${url}`);
     if (!process.env.NO_SCHEDULER) scheduler.start();
+    if (onReady) onReady(url);
   });
 }
 
-module.exports = { server };
+if (require.main === module) start();
+
+module.exports = { server, start };

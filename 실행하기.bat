@@ -12,6 +12,6 @@ if errorlevel 1 (
   exit /b
 )
 echo 블로그 작업대를 켜는 중입니다. 이 창을 닫으면 프로그램도 꺼집니다.
-start "" http://localhost:3000
-node server.js
+
+node start.js --open
 pause

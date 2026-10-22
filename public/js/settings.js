@@ -59,6 +59,12 @@ views.settings = async () => {
         <textarea name="keywords" rows="10">${esc(s.keywords.join('\n'))}</textarea>
       </section>
 
+      <section class="card grid">
+        <h2>자동 업데이트</h2>
+        <p class="small muted" style="margin:0">프로그램을 켤 때마다 GitHub에서 새 버전을 확인해 자동으로 받아요. 저장소가 비공개라면 읽기 권한 토큰이 필요해요(공개 저장소면 비워 두세요).</p>
+        <label class="field">GitHub 토큰 (선택)<input name="githubToken" type="password" value="${esc(s.githubToken)}" autocomplete="off" placeholder="github_pat_..."></label>
+      </section>
+
       <div class="row">
         <button class="btn primary">저장</button>
         <button class="btn" type="button" onclick="refreshAll()">저장한 데이터 비우고 새로 가져오기</button>
