@@ -232,6 +232,7 @@ async function renderHelper(b) {
       <div class="grid grid-2 section">
         <section class="card">
           <h2>제목 후보</h2>
+          ${h.audience && h.audience.label !== '고르게 분포' ? `<p class="small muted" style="margin-top:0">👤 이 키워드는 <b>${esc(h.audience.label)}</b> 중심으로 찾아요 (네이버 쇼핑 클릭 기준)</p>` : ''}
           <ul class="plain">${h.titles.map((t) => `<li class="row"><span class="spacer">${esc(t)}</span><button class="btn ghost sm" data-copy="${esc(t)}">복사</button></li>`).join('')}</ul>
         </section>
         <section class="card">

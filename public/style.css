@@ -279,3 +279,9 @@ dialog.dlg h2 { margin: 0; }
 .picks li > a:first-child { text-decoration: none; font-weight: 600; }
 .picks li > a:first-child:hover { text-decoration: underline; }
 .picks .btn { margin-left: auto; padding: 2px 8px; }
+.chip.buy { background: var(--up-soft); color: var(--up); font-weight: 600; }
+.chip.info { background: var(--info-soft); color: var(--info); font-weight: 600; }
+.chip.target { background: var(--surface-2); color: var(--ink); }
+.cal-item.peak { background: #fff1d6; color: #8a5a00; }
+.cal-item.prepare { background: var(--accent); color: #fff; border: 0; cursor: pointer; font: inherit; font-size: 12px; text-align: left; width: 100%; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cal-item.peak { background: #3a2f17; color: #e9b955; } }

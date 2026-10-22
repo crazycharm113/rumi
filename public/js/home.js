@@ -8,6 +8,7 @@ views.home = async () => {
     <h1>${esc(dateText)}</h1>
     <p class="lede">오늘 올릴 만한 주제 6개와 그 이유, 블로거들이 많이 언급한 제품입니다.</p>
     ${dataBanner(b.keywordsMeta, '키워드 데이터')}
+    ${b.shopError ? `<div class="banner stale">쇼핑인사이트를 가져오지 못해 구매 관심도 없이 보여드려요: ${esc(b.shopError)}</div>` : ''}
 
     <section class="section card">${weatherBar(b.weather)}</section>
 
@@ -40,6 +41,11 @@ views.home = async () => {
       <section class="card">
         <div class="section-head"><h2>이번 주 일정</h2><a class="btn sm" href="#/calendar">캘린더</a></div>
         ${weekList(b.week)}
+        ${b.upcomingPeaks.length ? `<div class="sub-head">곧 준비할 시즌 글 · 작년 쇼핑 클릭 정점 기준${b.peaksDemo ? ' (예시)' : ''}</div>
+          <ul class="plain">${b.upcomingPeaks.map((p) => `<li class="row">
+            <span class="spacer"><b>${esc(p.word)}</b> <span class="small muted">정점 ${esc(mmdd(p.peak))} · 준비 ${esc(mmdd(p.prepare))}부터</span></span>
+            <button class="btn sm" data-w="${esc(p.word)}" data-d="${p.prepare <= kstDate() ? kstDate(1) : p.prepare}" onclick="scheduleTopic(this.dataset.w, this.dataset.w + ' 코디 추천', this.dataset.d)">일정 잡기</button>
+          </li>`).join('')}</ul>` : ''}
         ${b.emptyDays.length ? `<div class="sub-head">비어 있는 날</div>
           <ul class="plain">${b.emptyDays.slice(0, 4).map((d) => `<li class="row">
             <span class="small muted" style="width:52px">${esc(mmdd(d.date))} ${'일월화수목금토'[new Date(d.date + 'T00:00:00').getDay()]}</span>
@@ -78,7 +84,8 @@ function topicCard(t, i) {
   return `<article class="card topic">
     <div class="num">주제 ${i + 1}</div>
     <h3>${esc(t.word)}</h3>
-    <div class="reasons">${t.reasons.map((r) => `<span class="chip ${r.kind}">${esc(r.text)}</span>`).join('')}</div>
+    <div class="reasons">${t.reasons.map((r) => `<span class="chip ${r.kind}">${esc(r.text)}</span>`).join('')}
+      ${audienceChip(t.audience)}</div>
     <div><div class="small muted">제목 아이디어${t.titleSource === 'mine' ? ' · <span class="tag-new">내 블로그 제목 스타일</span>' : ''}</div>
       <ul class="titles">${t.titleIdeas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>
     ${picksBlock(t)}
@@ -90,6 +97,15 @@ function topicCard(t, i) {
       </span>
     </div>
   </article>`;
+}
+
+// 누가 찾는지: 쇼핑 클릭 기준 성별·연령
+function audienceChip(a) {
+  if (!a) return '';
+  const parts = [];
+  if (a.female != null) parts.push(`여성 ${a.female}%`);
+  if (a.topAge) parts.push(`${a.topAge.label} ${a.topAge.share}%`);
+  return `<span class="chip target" title="네이버 쇼핑 클릭 기준">👤 ${esc(a.label)} 중심${parts.length ? ` (${esc(parts.join(', '))})` : ''}</span>`;
 }
 
 // 주제별 추천 제품: 블로거들이 많이 언급한 제품 + 내 보드에 담아 둔 같은 종류 상품
@@ -178,5 +194,7 @@ function calItemLabel(it) {
   if (it.kind === 'event') return `<span class="cal-item ev-${it.type}">${esc(it.typeLabel)} · ${esc(it.title)}</span>`;
   if (it.kind === 'suggest') return `<a class="cal-item suggest" href="#/boards/${it.boardId}">💡 ${esc(it.title)}</a>`;
   if (it.kind === 'weather') return `<span class="cal-item weather">🌡 ${esc(it.title)}</span>`;
+  if (it.kind === 'peak') return `<span class="cal-item peak">📈 ${esc(it.title)}</span>`;
+  if (it.kind === 'prepare') return `<span class="cal-item prepare">✍️ ${esc(it.title)}</span>`;
   return '';
 }

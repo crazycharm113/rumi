@@ -21,7 +21,7 @@ views.settings = async () => {
           <ol style="margin:0;padding-left:18px">
             <li>네이버 클라우드 플랫폼(ncloud.com)에 가입·로그인</li>
             <li>콘솔에서 <b>NAVER API HUB</b> 이용 신청 → Application 등록</li>
-            <li>사용할 API로 <b>Search Trend(검색어 트렌드)</b>와 <b>검색 - 블로그</b>를 선택</li>
+            <li>사용할 API로 <b>Search Trend(검색어 트렌드)</b>, <b>검색 - 블로그</b>, <b>Shopping Insight(쇼핑인사이트)</b>를 선택</li>
             <li>발급된 Client ID와 Client Secret을 아래에 붙여넣기</li>
           </ol>
         </div>

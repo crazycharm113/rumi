@@ -29,6 +29,7 @@ views.calendar = async (parts, params) => {
       <span class="cal-item s-idea">구상</span><span class="cal-item s-shoot">촬영</span><span class="cal-item s-write">작성</span><span class="cal-item s-done">발행</span>
       <span class="cal-item deadline">협찬 마감</span><span class="cal-item ev-sale">세일</span><span class="cal-item ev-launch">신상</span>
       <span class="cal-item weather">기온 하강</span><span class="cal-item suggest">할인 글 제안</span>
+      <span class="cal-item peak">작년 정점</span><span class="cal-item prepare">준비 시작</span>
     </div>
     <div class="cal">
       ${'일월화수목금토'.split('').map((d, i) => `<div class="cal-dow ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${d}</div>`).join('')}
@@ -57,6 +58,8 @@ function calCell(it) {
   if (it.kind === 'event') return it.first ? `<span class="cal-item ev-${it.type}" title="${esc(it.title)}">${short(it.title)}</span>` : `<span class="cal-item ev-${it.type} cont" title="${esc(it.title)}">&nbsp;</span>`;
   if (it.kind === 'suggest') return `<a class="cal-item suggest" href="#/boards/${it.boardId}" title="${esc(it.title)}">💡 ${short(it.title.replace('할인 정보 글 후보: ', ''))}</a>`;
   if (it.kind === 'weather') return `<span class="cal-item weather" title="${esc(it.title)}">🌡 ${short(it.title)}</span>`;
+  if (it.kind === 'peak') return `<span class="cal-item peak" title="작년 쇼핑 클릭이 가장 많았던 주를 올해로 옮긴 날">📈 ${short(it.word)} 정점</span>`;
+  if (it.kind === 'prepare') return `<button class="cal-item prepare" title="정점 2주 전: 지금 글을 준비하면 좋아요" onclick="scheduleTopic('${esc(it.word)}', '${esc(it.word)} 코디 추천')">✍️ ${short(it.word)} 준비</button>`;
   return '';
 }
 

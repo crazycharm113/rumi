@@ -157,8 +157,8 @@ async function calendarMonth(month) {
   const [y, m] = month.split('-').map(Number);
   const from = `${month}-01`;
   const to = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
-  const weather = await service.getWeather().catch(() => ({}));
-  return { month, from, to, days: calendar.build(db, from, to, weather.days || {}), events: db.events };
+  const [weather, peaks] = await Promise.all([service.getWeather().catch(() => ({})), service.getPeaks()]);
+  return { month, from, to, days: calendar.build(db, from, to, weather.days || {}, peaks.peaks), events: db.events, peaksDemo: peaks.demo };
 }
 
 // ---- 성과 ----
@@ -174,15 +174,23 @@ const routes = [
   ['PUT', /^\/api\/settings$/, (m, body) => updateSettings(body)],
   ['GET', /^\/api\/briefing$/, async (m, b, q) => {
     const db = store.load();
-    const brief = await service.getBriefing({ force: q.get('refresh') === '1' });
+    const [brief, peaks] = await Promise.all([service.getBriefing({ force: q.get('refresh') === '1' }), service.getPeaks()]);
     const weekEnd = store.kstDate(6);
-    const week = calendar.build(db, store.kstDate(), weekEnd, brief.weather.days || {});
+    const week = calendar.build(db, store.kstDate(), weekEnd, brief.weather.days || {}, peaks.peaks);
+    // 앞으로 60일 안에 준비를 시작해야 하는 시즌 글 (준비 시작일 순)
+    const upcomingPeaks = Object.entries(peaks.peaks || {})
+      .map(([word, p]) => ({ word, ...p }))
+      .filter((p) => p.prepare <= store.kstDate(60))
+      .sort((a, b) => a.prepare.localeCompare(b.prepare))
+      .slice(0, 5);
     return {
       ...brief,
       brandFeed: service.getBrandFeed(),
       alerts: db.alerts.filter((a) => !a.dismissed).slice(0, 8),
       unreadAlerts: db.alerts.filter((a) => !a.read && !a.dismissed).length,
       week,
+      upcomingPeaks,
+      peaksDemo: peaks.demo,
       emptyDays: calendar.emptyDays(db.boards, brief.topics),
     };
   }],
@@ -190,6 +198,7 @@ const routes = [
     const r = await service.getKeywordRows({ force: q.get('refresh') === '1' });
     return { ...r, ageLabel: AGE_GROUPS[r.age].label };
   }],
+  ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
   ['POST', /^\/api\/refresh$/, () => { store.clearCache(); return { ok: true }; }],
   ['POST', /^\/api\/heartbeat$/, (m, body) => {
@@ -263,11 +272,14 @@ const routes = [
   ['POST', /^\/api\/scrape$/, (m, body) => scrape(String(body.url || ''))],
 
   // 포스팅 도우미
-  ['GET', /^\/api\/boards\/(\w+)\/helper$/, (m, b, q) => {
+  ['GET', /^\/api\/boards\/(\w+)\/helper$/, async (m, b, q) => {
     const board = findBoard(m[1]);
     const ids = q.get('products');
     const chosen = ids ? board.products.filter((p) => ids.split(',').includes(p.id)) : board.products;
-    return { table: helper.productTable(chosen), titles: helper.titleIdeas(board, new Date(), store.load().posts), tags: helper.tagIdeas(board), checklist: helper.checklist(board) };
+    const audience = board.keyword ? await service.getAudience(board.keyword) : null;
+    const titles = helper.titleIdeas(board, new Date(), store.load().posts);
+    if (audience && audience.label !== '고르게 분포') titles.splice(Math.min(3, titles.length), 0, `${audience.label} ${board.keyword} 코디 추천`);
+    return { table: helper.productTable(chosen), titles: [...new Set(titles)], tags: helper.tagIdeas(board), checklist: helper.checklist(board), audience };
   }],
 
   // 알림

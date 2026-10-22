@@ -9,6 +9,7 @@ views.keywords = async (parts, params) => {
   const render = async () => {
     let body = '';
     if (kwState.tab === 'score') body = scoreTable(data.rows, focus);
+    else if (kwState.tab === 'discover') body = await discoverView(data.rows);
     else body = await bloggerItems();
     $app.innerHTML = `
       <h1>키워드 기회 분석</h1>
@@ -18,6 +19,7 @@ views.keywords = async (parts, params) => {
         <div class="subtabs" role="tablist">
           <button role="tab" class="${kwState.tab === 'score' ? 'on' : ''}" data-t="score">기회 점수</button>
           <button role="tab" class="${kwState.tab === 'items' ? 'on' : ''}" data-t="items">요즘 많이 올라오는 아이템</button>
+          <button role="tab" class="${kwState.tab === 'discover' ? 'on' : ''}" data-t="discover">새로 뜨는 아이템</button>
         </div>
         ${kwState.tab === 'score' ? ageSelect(data.age, settings.ages) : ''}
       </div>
@@ -51,6 +53,8 @@ function scoreTable(rows, focus) {
       <ul>
         <li><b>관심도 변화 지수</b>: 네이버 데이터랩 검색어트렌드에서 최근 7일 평균 ÷ 그 전 7일 평균 × 100 (100이면 변화 없음).</li>
         <li><b>블로그 글 수</b>: 네이버 블로그 검색 결과 총 건수(근사치). 글이 10배 많으면 점수가 한 단계 내려가도록 로그를 썼습니다.</li>
+        <li><b>쇼핑 클릭 변화</b>: 네이버 쇼핑인사이트에서 최근 7일 클릭 ÷ 그 전 7일. 있으면 관심도 변화 지수를 '검색 지수와 클릭 지수의 평균'으로 계산해 구매 관심을 반영합니다.
+          <span class="chip buy">구매</span> 검색·클릭이 함께 오름 → 제품 추천·비교 글, <span class="chip info">정보</span> 검색만 오름 → 코디·스타일링 글.</li>
         <li><b>관심 수준</b>: '코디' 검색량을 100으로 둔 상대값. 1 미만은 검색이 너무 적어 추천에서 뺍니다.</li>
       </ul>
       <p>점수가 높다고 무조건 좋은 주제는 아닙니다. 내 블로그 성격과 시즌을 함께 보고 고르세요.</p>
@@ -60,6 +64,7 @@ function scoreTable(rows, focus) {
         ${head('word', '키워드')}
         <th>최근 14일 흐름</th>
         ${head('change', '7일 관심도 변화', 'num')}
+        ${head('shopChange', '쇼핑 클릭 변화', 'num')}
         ${head('level', '관심 수준', 'num')}
         ${head('posts', '블로그 글 수', 'num')}
         ${head('score', '기회 점수')}
@@ -69,6 +74,8 @@ function scoreTable(rows, focus) {
         <td><b>${esc(r.word)}</b>${r.lowVolume ? ' <span class="chip warn">검색 적음</span>' : ''}</td>
         <td>${spark(r.spark)}</td>
         <td class="num"><span class="pct ${r.change > 0 ? 'up' : r.change < 0 ? 'down' : ''}">${signed(r.change)}%</span></td>
+        <td class="num">${r.shopChange == null ? '<span class="muted">–</span>' : `<span class="pct ${r.shopChange > 0 ? 'up' : r.shopChange < 0 ? 'down' : ''}">${signed(r.shopChange)}%</span>`}
+          ${r.intent === 'buy' ? ' <span class="chip buy">구매</span>' : r.intent === 'info' ? ' <span class="chip info">정보</span>' : ''}</td>
         <td class="num">${r.level}</td>
         <td class="num">${num(r.posts)}</td>
         <td><span class="bar" style="width:${Math.round(((r.score || 0) / maxScore) * 90)}px"></span><span class="score">${r.score ?? '–'}</span></td>
@@ -94,3 +101,31 @@ async function bloggerItems() {
     </div>`;
 }
 
+
+// 새로 뜨는 아이템: 지켜보지 않는 아이템 중 네이버 쇼핑 클릭이 오르는 것
+async function discoverView() {
+  const d = await api('/api/discover');
+  const cats = (d.categories || []).map((c) => {
+    const w = c.weeks;
+    const last = w[w.length - 1]?.ratio, prev = w[w.length - 2]?.ratio;
+    const ch = last && prev ? Math.round((last / prev - 1) * 100) : null;
+    return `<span class="chip ${ch > 0 ? 'up' : ch < 0 ? 'down' : ''}">${esc(c.name)} 지난주 대비 ${ch == null ? '–' : signed(ch) + '%'}</span>`;
+  }).join(' ');
+  return `${d.demo ? dataBanner(d, '쇼핑 클릭 데이터') : ''}
+    ${d.error ? `<div class="banner stale">쇼핑인사이트를 가져오지 못했어요: ${esc(d.error)}</div>` : ''}
+    <p class="small muted">지켜보는 키워드에 없는 아이템 40개 중, 네이버 쇼핑 클릭이 지난주보다 오른 것입니다. 마음에 들면 키워드에 추가하세요.</p>
+    ${cats ? `<div class="row" style="margin-bottom:12px">${cats}</div>` : ''}
+    ${d.items.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>아이템</th><th>최근 14일 쇼핑 클릭</th><th class="num">7일 변화</th><th></th></tr></thead>
+      <tbody>${d.items.map((x) => `<tr><td><b>${esc(x.word)}</b></td><td>${spark(x.spark)}</td>
+        <td class="num"><span class="pct up">${signed(x.change)}%</span></td>
+        <td><button class="btn sm" data-add="${esc(x.word)}" onclick="addKeyword(this.dataset.add)">키워드에 추가</button></td></tr>`).join('')}</tbody>
+    </table></div>` : '<div class="card empty">지금은 새로 뜨는 아이템이 없어요.</div>'}`;
+}
+
+async function addKeyword(word) {
+  const s = await api('/api/settings');
+  if (s.keywords.includes(word)) return toast('이미 지켜보고 있어요');
+  await api('/api/settings', { method: 'PUT', body: { keywords: [...s.keywords, word] } });
+  toast(`'${word}'를 지켜볼 키워드에 추가했어요. 내일 분석부터 반영돼요.`);
+}
