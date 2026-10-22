@@ -76,7 +76,7 @@ function scoreTable(rows, focus) {
         <th></th>
       </tr></thead>
       <tbody>${sorted.map((r) => `<tr id="kw-${esc(r.word)}" class="${r.lowVolume ? 'low' : ''}" ${r.word === focus ? 'style="background:var(--accent-soft)"' : ''}>
-        <td><b>${esc(r.word)}</b>${r.lowVolume ? ' <span class="chip warn">검색 적음</span>' : ''}</td>
+        <td><b>${esc(r.word)}</b>${r.auto ? ' <span class="chip" title="요즘 쇼핑 클릭이 올라 자동으로 고른 키워드">자동</span>' : ''}${r.lowVolume ? ' <span class="chip warn">검색 적음</span>' : ''}</td>
         <td>${spark(r.spark)}</td>
         <td class="num"><span class="pct ${r.change > 0 ? 'up' : r.change < 0 ? 'down' : ''}">${signed(r.change)}%</span></td>
         <td class="num">${r.shopChange == null ? '<span class="muted">–</span>' : `<span class="pct ${r.shopChange > 0 ? 'up' : r.shopChange < 0 ? 'down' : ''}">${signed(r.shopChange)}%</span>`}
@@ -88,7 +88,8 @@ function scoreTable(rows, focus) {
           : `<span class="pct ${r.postsDelta > 0 ? 'up' : r.postsDelta < 0 ? 'down' : ''}">${r.postsDelta > 0 ? '+' : ''}${num(r.postsDelta)}</span>${r.postsDeltaDays > 1 ? `<span class="small muted"> (${r.postsDeltaDays}일)</span>` : ''}`}</td>
         <td class="num" title="상위 10개 글의 작성일 중간값 · 6개월 넘은 글 비율">${r.freshness ? `${r.freshness.medianAge}일 <span class="small ${r.freshness.oldShare >= 60 ? 'tag-new' : 'muted'}">(${r.freshness.oldShare}% 오래됨)</span>` : '<span class="muted">–</span>'}</td>
         <td><span class="bar" style="width:${Math.round(((r.score || 0) / maxScore) * 90)}px"></span><span class="score">${r.score ?? '–'}</span></td>
-        <td><button class="btn sm" data-word="${esc(r.word)}" onclick="makeBoard(this.dataset.word, this.dataset.word + ' 코디')">보드 만들기</button></td>
+        <td class="row" style="flex-wrap:nowrap"><button class="btn sm" data-word="${esc(r.word)}" onclick="makeBoard(this.dataset.word, this.dataset.word + ' 코디')">보드 만들기</button>
+          <button class="btn ghost sm" data-word="${esc(r.word)}" onclick="excludeKeyword(this.dataset.word)" title="추천에서 빼기">제외</button></td>
       </tr>`).join('')}</tbody>
     </table></div>
     <p class="small muted">흐름 그래프의 색칠된 부분이 최근 7일입니다. 지켜볼 키워드는 <a href="#/settings">설정</a>에서 바꿀 수 있어요.</p>`;
@@ -137,4 +138,11 @@ async function addKeyword(word) {
   if (s.keywords.includes(word)) return toast('이미 지켜보고 있어요');
   await api('/api/settings', { method: 'PUT', body: { keywords: [...s.keywords, word] } });
   toast(`'${word}'를 지켜볼 키워드에 추가했어요. 내일 분석부터 반영돼요.`);
+}
+
+async function excludeKeyword(word) {
+  if (!confirm(`'${word}'를 추천에서 뺄까요? 설정의 '제외할 키워드'에서 다시 되돌릴 수 있어요.`)) return;
+  const s = await api('/api/settings');
+  await api('/api/settings', { method: 'PUT', body: { excludedKeywords: [...s.excludedKeywords, word], keywords: s.keywords.filter((w) => w !== word) } });
+  toast(`'${word}'를 제외했어요. 내일 분석부터 반영돼요.`);
 }

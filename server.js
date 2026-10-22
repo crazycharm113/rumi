@@ -44,6 +44,8 @@ function publicSettings() {
     region: s.region,
     age: s.age,
     keywords: s.keywords,
+    autoKeywords: s.autoKeywords,
+    excludedKeywords: s.excludedKeywords,
     brands: s.brands,
     blogId: s.blogId,
     naverKeyType: s.naverKeyType,
@@ -68,9 +70,11 @@ function updateSettings(body) {
   if (body.age && AGE_GROUPS[body.age]) s.age = body.age;
   if (['hub', 'legacy'].includes(body.naverKeyType)) s.naverKeyType = body.naverKeyType;
   if (Array.isArray(body.keywords)) {
-    const words = cleanList(body.keywords, 60);
-    if (words.length) s.keywords = words;
+    // 자동 관리를 쓰면 꼭 포함할 키워드는 비워 둬도 됩니다.
+    s.keywords = cleanList(body.keywords, 60);
   }
+  if (typeof body.autoKeywords === 'boolean') s.autoKeywords = body.autoKeywords;
+  if (Array.isArray(body.excludedKeywords)) s.excludedKeywords = cleanList(body.excludedKeywords, 200);
   if (Array.isArray(body.brands)) {
     const brands = cleanList(body.brands, 20);
     if (brands.join() !== s.brands.join()) delete db.jobs.brandFeed; // 브랜드가 바뀌면 바로 다시 가져옵니다.
@@ -200,6 +204,7 @@ const routes = [
     return { ...r, ageLabel: AGE_GROUPS[r.age].label };
   }],
   ['GET', /^\/api\/topics$/, (m, b, q) => service.getTopics(q.get('age') || 'all')],
+  ['GET', /^\/api\/active-keywords$/, () => service.activeKeywords()],
   ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/backups$/, () => ({ backups: store.listBackups() })],
