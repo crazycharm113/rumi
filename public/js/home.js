@@ -13,7 +13,7 @@ views.home = async () => {
 
     <section class="section">
       <div class="section-head"><h2>오늘 올릴 주제 3개</h2>
-        <span class="small muted">${esc(b.ageLabel)} 기준 · 기회 점수는 참고용</span></div>
+        <span class="small muted">${esc(b.ageLabel)} 기준 · 기회 점수는 참고용${b.topics[0]?.titleSource === 'noblog' ? ' · <a href="#/settings">블로그 아이디</a>를 넣으면 내 제목 스타일로 추천해요' : ''}</span></div>
       <div class="grid grid-3">
         ${b.topics.length ? b.topics.map(topicCard).join('') : `<div class="card empty">추천할 주제가 없습니다. <a href="#/settings">키워드</a>를 더 추가해 보세요.</div>`}
       </div>
@@ -79,7 +79,7 @@ function topicCard(t, i) {
     <div class="num">주제 ${i + 1}</div>
     <h3>${esc(t.word)}</h3>
     <div class="reasons">${t.reasons.map((r) => `<span class="chip ${r.kind}">${esc(r.text)}</span>`).join('')}</div>
-    <div><div class="small muted">제목 아이디어</div>
+    <div><div class="small muted">제목 아이디어${t.titleSource === 'mine' ? ' · <span class="tag-new">내 블로그 제목 스타일</span>' : ''}</div>
       <ul class="titles">${t.titleIdeas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>
     <div class="foot">
       <span class="small muted">기회 점수 <span class="score">${t.score}</span></span>

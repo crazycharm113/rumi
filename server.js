@@ -267,7 +267,7 @@ const routes = [
     const board = findBoard(m[1]);
     const ids = q.get('products');
     const chosen = ids ? board.products.filter((p) => ids.split(',').includes(p.id)) : board.products;
-    return { table: helper.productTable(chosen), titles: helper.titleIdeas(board), tags: helper.tagIdeas(board), checklist: helper.checklist(board) };
+    return { table: helper.productTable(chosen), titles: helper.titleIdeas(board, new Date(), store.load().posts), tags: helper.tagIdeas(board), checklist: helper.checklist(board) };
   }],
 
   // 알림
