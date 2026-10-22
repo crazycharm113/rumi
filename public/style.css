@@ -274,11 +274,14 @@ dialog.dlg h2 { margin: 0; }
 .news a { text-decoration: none; }
 .news a:hover { text-decoration: underline; }
 .picks { border-top: 1px dashed var(--line); padding-top: 8px; }
-.picks ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
-.picks li { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 14px; }
-.picks li > a:first-child { text-decoration: none; font-weight: 600; }
-.picks li > a:first-child:hover { text-decoration: underline; }
-.picks .btn { margin-left: auto; padding: 2px 8px; }
+.picks ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+/* 제품명(위)과 언급·후기(아래)는 왼쪽 줄에, 담기 버튼은 오른쪽 줄에 맞춥니다. */
+.picks li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; row-gap: 1px; align-items: center; font-size: 14px; }
+.picks .pick-name { grid-column: 1; text-decoration: none; font-weight: 600; overflow-wrap: anywhere; }
+.picks .pick-name:hover { text-decoration: underline; }
+.picks .pick-meta { grid-column: 1; }
+.picks .pick-add { grid-column: 2; grid-row: 1 / span 2; padding: 2px 8px; }
+.picks li > a:only-child, .picks li > a:first-child:not(.pick-name) { grid-column: 1 / -1; }
 .chip.buy { background: var(--up-soft); color: var(--up); font-weight: 600; }
 .chip.info { background: var(--info-soft); color: var(--info); font-weight: 600; }
 .chip.target { background: var(--surface-2); color: var(--ink); }

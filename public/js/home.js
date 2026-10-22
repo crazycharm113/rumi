@@ -143,10 +143,9 @@ function picksBlock(t) {
   if (!p.items.length && !p.mine.length) return p.error ? `<div class="small muted">추천 제품을 가져오지 못했어요.</div>` : '';
   return `<div class="picks"><div class="small muted">추천 제품 · 블로그 언급 기준${p.demo ? ' (예시)' : ''}</div>
     <ul>${p.items.map((x) => `<li>
-      <a href="${esc(x.shopUrl)}" target="_blank" rel="noopener noreferrer" title="네이버 쇼핑에서 검색">${esc(x.name)} ↗</a>
-      <span class="small muted">언급 ${x.mentions}회</span>
-      ${x.review?.link && x.review.link !== '#' ? `<a class="small" href="${esc(x.review.link)}" target="_blank" rel="noopener noreferrer" title="${esc(x.review.title)}">후기</a>` : ''}
-      <button class="btn ghost sm" data-x='${esc(JSON.stringify({ name: x.name, brand: x.brand, memo: `네이버 쇼핑 검색: ${x.shopUrl}` }))}' data-kw="${esc(t.word)}" onclick="addToBoard(JSON.parse(this.dataset.x), this.dataset.kw)">담기</button>
+      <a class="pick-name" href="${esc(x.shopUrl)}" target="_blank" rel="noopener noreferrer" title="네이버 쇼핑에서 검색">${esc(x.name)}&nbsp;↗</a>
+      <span class="pick-meta small muted">언급 ${x.mentions}회${x.review?.link && x.review.link !== '#' ? ` · <a href="${esc(x.review.link)}" target="_blank" rel="noopener noreferrer" title="${esc(x.review.title)}">후기</a>` : ''}</span>
+      <button class="btn ghost sm pick-add" data-x='${esc(JSON.stringify({ name: x.name, brand: x.brand, memo: `네이버 쇼핑 검색: ${x.shopUrl}` }))}' data-kw="${esc(t.word)}" onclick="addToBoard(JSON.parse(this.dataset.x), this.dataset.kw)">담기</button>
     </li>`).join('')}
     ${p.mine.map((x) => `<li><a href="#/boards/${x.boardId}">내 보드: ${esc(x.name || '이름 없음')}</a>${x.price ? ` <span class="small muted">${won(x.price)}</span>` : ''}</li>`).join('')}</ul></div>`;
 }
