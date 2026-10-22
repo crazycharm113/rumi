@@ -403,6 +403,20 @@ const server = http.createServer(async (req, res) => {
 });
 
 function start(onReady) {
+  server.once('error', async (err) => {
+    if (err.code !== 'EADDRINUSE') throw err;
+    const url = `http://localhost:${PORT}`;
+    // 같은 자리에 이미 이 프로그램이 켜져 있으면 그 화면을 열어 주고 끝냅니다.
+    const mine = await fetch(`${url}/api/settings`, { signal: AbortSignal.timeout(3000) }).then((r) => r.ok).catch(() => false);
+    if (mine) {
+      console.log(`이미 켜져 있어요 → ${url} (다른 검은 창에서 실행 중이에요)`);
+      if (onReady) onReady(url);
+      setTimeout(() => process.exit(0), 1500);
+    } else {
+      console.log(`${PORT}번 포트를 다른 프로그램이 쓰고 있어요. .env 파일에 PORT=3001 처럼 다른 번호를 넣고 다시 실행해 주세요.`);
+      process.exitCode = 1;
+    }
+  });
   server.listen(PORT, HOST, () => {
     const url = `http://localhost:${PORT}`;
     console.log(`패션 블로거 작업 도우미가 열렸습니다 → ${url}`);
