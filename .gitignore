@@ -3,3 +3,6 @@ data/*.json
 node_modules/
 .version
 .update-manifest
+data/photos/
+data/backup/
+data/*.log*

@@ -73,6 +73,13 @@ views.settings = async () => {
         <label class="field">GitHub 토큰 (선택)<input name="githubToken" type="password" value="${esc(s.githubToken)}" autocomplete="off" placeholder="github_pat_..."></label>
       </section>
 
+      <section class="card grid" id="photoBox">
+        <h2>사이드 사진</h2>
+        <p class="small muted" style="margin:0">넓은 화면에서 양옆 빈자리에 사진을 액자처럼 띄워요(최대 8장). 사진은 이 PC의 <code>data\\photos</code>에만 저장되고 GitHub에는 올라가지 않아요. 화면이 좁으면 자동으로 숨겨져요.</p>
+        <label class="btn" style="cursor:pointer;justify-self:start">사진 추가<input type="file" accept="image/*" multiple hidden onchange="uploadPhotos(this.files); this.value=''"></label>
+        <div id="photoList"></div>
+      </section>
+
       <section class="card grid" id="backupBox">
         <h2>백업</h2>
         <p class="small muted" style="margin:0">하루 한 번 자동으로 백업해 최근 7일 치를 <code>data\\backup</code> 폴더에 보관해요. 다른 PC로 옮길 때는 내보낸 파일을 그 PC에서 가져오면 돼요. 내보낸 파일에는 API 키도 들어 있으니 공개된 곳에 올리지 마세요.</p>
@@ -93,6 +100,7 @@ views.settings = async () => {
     </form>`;
 
   renderBackups();
+  renderPhotoList();
   api('/api/active-keywords').then((a) => {
     const el = document.getElementById('activeNow');
     if (el && a.auto.length) el.innerHTML = `오늘 자동으로 고른 키워드: ${a.auto.map((w) => `<span class="chip">${esc(w)}</span>`).join(' ')}`;
@@ -168,4 +176,58 @@ async function importData(file) {
     toast('가져왔어요');
     route();
   } catch (err) { toast(err.message); }
+}
+
+// ---- 사이드 사진 ----
+// 큰 사진은 화면에서 긴 변 900px로 줄여서 올립니다(빠르고 저장 공간도 적게).
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 900 / Math.max(img.width, img.height));
+      const c = Object.assign(document.createElement('canvas'), { width: Math.round(img.width * k), height: Math.round(img.height * k) });
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => reject(new Error(`${file.name}: 이 형식은 열 수 없어요(jpg, png, webp로 올려 주세요).`));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function uploadPhotos(files) {
+  // 파일 선택 칸을 바로 비우므로, 목록을 먼저 복사해 둡니다.
+  for (const f of [...files]) {
+    try {
+      await api('/api/photos', { method: 'POST', body: { dataUrl: await shrink(f) } });
+    } catch (err) { toast(err.message); }
+  }
+  renderPhotoList();
+  renderSidePhotos();
+}
+
+async function renderPhotoList() {
+  const box = document.getElementById('photoList');
+  if (!box) return;
+  const list = await api('/api/photos');
+  box.innerHTML = list.length ? `<ul class="photo-list">${list.map((p, i) => `<li data-file="${esc(p.file)}">
+      <img src="/photos/${esc(p.file)}" alt="">
+      <input data-cap value="${esc(p.caption)}" placeholder="문구 (예: 오늘도 꿀잠 중 🧡)" maxlength="40">
+      <select data-side><option value="left" ${p.side === 'left' ? 'selected' : ''}>왼쪽</option><option value="right" ${p.side === 'right' ? 'selected' : ''}>오른쪽</option></select>
+      <span class="row" style="flex-wrap:nowrap">
+        <button class="btn ghost sm" type="button" data-move="up" ${i === 0 ? 'disabled' : ''} aria-label="위로">↑</button>
+        <button class="btn ghost sm" type="button" data-move="down" ${i === list.length - 1 ? 'disabled' : ''} aria-label="아래로">↓</button>
+        <button class="btn ghost sm danger" type="button" data-del>삭제</button></span>
+    </li>`).join('')}</ul>` : '<p class="small muted">아직 사진이 없어요.</p>';
+  const put = async (li, body) => { await api(`/api/photos/${li.dataset.file}`, { method: 'PUT', body }); renderSidePhotos(); };
+  box.querySelectorAll('li').forEach((li) => {
+    li.querySelector('[data-cap]').addEventListener('input', debounce((e) => put(li, { caption: e.target.value }), 500));
+    li.querySelector('[data-side]').addEventListener('change', (e) => put(li, { side: e.target.value }));
+    li.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', async () => { await put(li, { move: b.dataset.move }); renderPhotoList(); }));
+    li.querySelector('[data-del]').addEventListener('click', async () => {
+      if (!confirm('이 사진을 지울까요?')) return;
+      await api(`/api/photos/${li.dataset.file}`, { method: 'DELETE' });
+      renderPhotoList(); renderSidePhotos();
+    });
+  });
 }

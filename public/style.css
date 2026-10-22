@@ -297,3 +297,28 @@ dialog.dlg h2 { margin: 0; }
 .picks .pick-review { grid-column: 1 / -1; text-decoration: none; font-size: 13.5px; }
 .picks .pick-review:hover { text-decoration: underline; }
 .picks .pick-search { display: inline-block; margin-top: 8px; }
+
+/* 양옆 사진: 콘텐츠(1080px) 양쪽 빈자리가 충분할 때만 보입니다. */
+.side-photos { display: none; }
+@media (min-width: 1560px) {
+  .side-photos {
+    display: flex; flex-direction: column; align-items: center; gap: 26px;
+    position: fixed; top: 92px; bottom: 24px; z-index: 1; pointer-events: none;
+    width: calc((100vw - 1080px) / 2); --w: min(250px, calc((100vw - 1080px) / 2 - 90px));
+  }
+  .side-photos.left { left: 0; }
+  .side-photos.right { right: 0; padding-top: 70px; }
+  .polaroid {
+    margin: 0; width: var(--w); background: #fff; padding: 10px 10px 12px; border-radius: 4px;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, .13); transform: rotate(var(--tilt)); pointer-events: auto;
+    transition: transform .2s;
+  }
+  .polaroid:hover { transform: rotate(0) scale(1.03); }
+  /* 사진이 여러 장이면 세로 공간을 나눠 가집니다. */
+  .polaroid img { display: block; width: 100%; max-height: calc((100vh - 200px) / var(--count) - 70px); object-fit: cover; border-radius: 2px; }
+  .polaroid figcaption { margin-top: 8px; text-align: center; font-size: 14px; color: #5c554c; }
+}
+.photo-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.photo-list li { display: grid; grid-template-columns: 56px 1fr 90px auto; gap: 10px; align-items: center; }
+.photo-list img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+@media (max-width: 640px) { .photo-list li { grid-template-columns: 48px 1fr; } .photo-list img { width: 48px; height: 48px; } }

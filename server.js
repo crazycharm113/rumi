@@ -16,6 +16,7 @@ const perf = require('./lib/performance');
 const brandnews = require('./lib/brandnews');
 const scheduler = require('./lib/scheduler');
 const report = require('./lib/report');
+const photos = require('./lib/photos');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -217,6 +218,10 @@ const routes = [
   ['GET', /^\/api\/active-keywords$/, () => service.activeKeywords()],
   ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
+  ['GET', /^\/api\/photos$/, () => photos.list()],
+  ['POST', /^\/api\/photos$/, (m, body) => photos.add(body)],
+  ['PUT', /^\/api\/photos\/([\w.]+)$/, (m, body) => photos.update(m[1], body)],
+  ['DELETE', /^\/api\/photos\/([\w.]+)$/, (m) => photos.remove(m[1])],
   ['GET', /^\/api\/backups$/, () => ({ backups: store.listBackups() })],
   ['POST', /^\/api\/backups$/, () => ({ name: store.backupToday({ force: true }), backups: store.listBackups() })],
   ['POST', /^\/api\/backups\/(db-[\d-]+\.json)\/restore$/, (m) => { store.restoreBackup(m[1]); return { ok: true }; }],
@@ -450,6 +455,7 @@ function serveStatic(req, res, pathname) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  if (url.pathname.startsWith('/photos/') && photos.serve(res, url.pathname.slice(8))) return;
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res, url.pathname);
   const route = routes.find(([method, re]) => method === req.method && re.test(url.pathname));
   if (!route) return send(res, 404, { error: '없는 주소입니다.' });

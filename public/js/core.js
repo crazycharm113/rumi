@@ -184,5 +184,19 @@ setInterval(heartbeat, 10000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') heartbeat(); });
 window.addEventListener('pagehide', () => navigator.sendBeacon('/api/bye', JSON.stringify({ id: pageId })));
 
+// 화면 양옆 빈자리에 띄우는 사진 (설정 → 사이드 사진). 화면이 좁으면 CSS 로 숨깁니다.
+async function renderSidePhotos() {
+  let list = [];
+  try { list = await api('/api/photos'); } catch { /* 사진 없이 */ }
+  for (const side of ['left', 'right']) {
+    const box = document.querySelector(`.side-photos.${side}`);
+    const mine = list.filter((p) => p.side === side);
+    box.innerHTML = mine.map((p, i) => `<figure class="polaroid" style="--tilt:${(side === 'left' ? -1 : 1) * (i % 2 ? 2 : 3)}deg">
+      <img src="/photos/${esc(p.file)}" alt="">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`).join('');
+    box.style.setProperty('--count', Math.max(1, mine.length));
+  }
+}
+renderSidePhotos();
+
 window.addEventListener('hashchange', route);
 window.addEventListener('DOMContentLoaded', route);
