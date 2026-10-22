@@ -6,13 +6,13 @@ views.home = async () => {
 
   $app.innerHTML = `
     <h1>${esc(dateText)}</h1>
-    <p class="lede">오늘 올릴 만한 주제 3개와 그 이유입니다.</p>
+    <p class="lede">오늘 올릴 만한 주제 6개와 그 이유, 블로거들이 많이 언급한 제품입니다.</p>
     ${dataBanner(b.keywordsMeta, '키워드 데이터')}
 
     <section class="section card">${weatherBar(b.weather)}</section>
 
     <section class="section">
-      <div class="section-head"><h2>오늘 올릴 주제 3개</h2>
+      <div class="section-head"><h2>오늘 올릴 주제 6개</h2>
         <span class="small muted">${esc(b.ageLabel)} 기준 · 기회 점수는 참고용${b.topics[0]?.titleSource === 'noblog' ? ' · <a href="#/settings">블로그 아이디</a>를 넣으면 내 제목 스타일로 추천해요' : ''}</span></div>
       <div class="grid grid-3">
         ${b.topics.length ? b.topics.map(topicCard).join('') : `<div class="card empty">추천할 주제가 없습니다. <a href="#/settings">키워드</a>를 더 추가해 보세요.</div>`}
@@ -81,6 +81,7 @@ function topicCard(t, i) {
     <div class="reasons">${t.reasons.map((r) => `<span class="chip ${r.kind}">${esc(r.text)}</span>`).join('')}</div>
     <div><div class="small muted">제목 아이디어${t.titleSource === 'mine' ? ' · <span class="tag-new">내 블로그 제목 스타일</span>' : ''}</div>
       <ul class="titles">${t.titleIdeas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>
+    ${picksBlock(t)}
     <div class="foot">
       <span class="small muted">기회 점수 <span class="score">${t.score}</span></span>
       <span class="row">
@@ -89,6 +90,34 @@ function topicCard(t, i) {
       </span>
     </div>
   </article>`;
+}
+
+// 주제별 추천 제품: 블로거들이 많이 언급한 제품 + 내 보드에 담아 둔 같은 종류 상품
+function picksBlock(t) {
+  const p = t.picks || { items: [], mine: [] };
+  if (!p.items.length && !p.mine.length) return p.error ? `<div class="small muted">추천 제품을 가져오지 못했어요.</div>` : '';
+  return `<div class="picks"><div class="small muted">추천 제품 · 블로그 언급 기준${p.demo ? ' (예시)' : ''}</div>
+    <ul>${p.items.map((x) => `<li>
+      <a href="${esc(x.shopUrl)}" target="_blank" rel="noopener noreferrer" title="네이버 쇼핑에서 검색">${esc(x.name)} ↗</a>
+      <span class="small muted">언급 ${x.mentions}회</span>
+      ${x.review?.link && x.review.link !== '#' ? `<a class="small" href="${esc(x.review.link)}" target="_blank" rel="noopener noreferrer" title="${esc(x.review.title)}">후기</a>` : ''}
+      <button class="btn ghost sm" data-x='${esc(JSON.stringify({ name: x.name, brand: x.brand, memo: `네이버 쇼핑 검색: ${x.shopUrl}` }))}' data-kw="${esc(t.word)}" onclick="addToBoard(JSON.parse(this.dataset.x), this.dataset.kw)">담기</button>
+    </li>`).join('')}
+    ${p.mine.map((x) => `<li><a href="#/boards/${x.boardId}">내 보드: ${esc(x.name || '이름 없음')}</a>${x.price ? ` <span class="small muted">${won(x.price)}</span>` : ''}</li>`).join('')}</ul></div>`;
+}
+
+// 추천 제품을 기존 보드나 새 보드에 담습니다.
+async function addToBoard(product, keyword) {
+  const boards = await api('/api/boards');
+  const r = await dialog('상품 보드에 담기', [
+    { name: 'board', label: '어느 글에 담을까요?', value: boards.find((b) => b.keyword === keyword)?.id || 'new',
+      options: [...boards.map((b) => ({ value: b.id, label: b.title })), { value: 'new', label: `+ 새 보드 만들기 (${keyword})` }] },
+  ], { submit: '담기' });
+  if (!r) return;
+  let id = r.board;
+  if (id === 'new') id = (await api('/api/boards', { method: 'POST', body: { keyword, title: `${keyword} 추천` } })).id;
+  await api(`/api/boards/${id}/products`, { method: 'POST', body: product });
+  toast('보드에 담았어요. 실제 상품 링크를 붙여넣으면 가격도 지켜봐요.');
 }
 
 function risingRow(r) {

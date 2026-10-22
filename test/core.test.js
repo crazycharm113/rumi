@@ -34,7 +34,7 @@ test('기회 점수: 관심이 같으면 글이 적을수록 높음', () => {
   assert.strictEqual(trendIndexOf([...Array(7).fill(0), ...Array(7).fill(3)]), 300);
 });
 
-test('주제 3개 고르기와 급상승 순위', () => {
+test('주제 고르기(검색 적은 키워드 제외)와 급상승 순위', () => {
   const up = [...Array(7).fill(10), ...Array(7).fill(20)];
   const flat = Array(14).fill(10);
   const rows = analyze(
@@ -43,7 +43,7 @@ test('주제 3개 고르기와 급상승 순위', () => {
   );
   const weather = { today: { avg: 12 }, drop: null };
   const topics = pickTopics(rows, weather);
-  assert.strictEqual(topics.length, 3);
+  assert.strictEqual(topics.length, 4); // 5개 중 검색이 너무 적은 1개 제외
   assert.strictEqual(topics[0].word, '트렌치코트'); // 시즌 맞음 → 반팔티보다 앞
   assert.ok(!topics.some((t) => t.word === '희귀템'));
   assert.ok(topics[0].reasons.some((r) => r.kind === 'season'));

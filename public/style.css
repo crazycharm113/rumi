@@ -273,3 +273,9 @@ dialog.dlg h2 { margin: 0; }
 .news li { display: flex; gap: 10px; align-items: flex-start; }
 .news a { text-decoration: none; }
 .news a:hover { text-decoration: underline; }
+.picks { border-top: 1px dashed var(--line); padding-top: 8px; }
+.picks ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.picks li { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.picks li > a:first-child { text-decoration: none; font-weight: 600; }
+.picks li > a:first-child:hover { text-decoration: underline; }
+.picks .btn { margin-left: auto; padding: 2px 8px; }
