@@ -192,6 +192,15 @@ const routes = [
   }],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
   ['POST', /^\/api\/refresh$/, () => { store.clearCache(); return { ok: true }; }],
+  ['POST', /^\/api\/heartbeat$/, (m, body) => {
+    clients.set(String(body.id || '').slice(0, 40), Date.now());
+    seenClient = true;
+    return { ok: true };
+  }],
+  ['POST', /^\/api\/bye$/, (m, body) => {
+    clients.delete(String(body.id || '').slice(0, 40));
+    return { ok: true };
+  }],
   ['POST', /^\/api\/shutdown$/, () => {
     // 창 없이 실행했을 때 끄는 방법. 응답을 보낸 뒤 저장하고 종료합니다.
     setTimeout(() => { store.save(); process.exit(0); }, 200);
@@ -407,6 +416,28 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// ---- 페이지를 닫으면 자동 종료 (창 없이 실행했을 때) ----
+// 열린 페이지마다 10초 간격으로 신호를 보내고, 닫힐 때 작별 신호를 보냅니다.
+// 열린 페이지가 하나도 없는 상태가 15초 이어지면 끕니다. 뒤로 숨은 탭은 브라우저가 신호를
+// 1분에 한 번으로 늦출 수 있어, 3분 동안 신호가 없을 때만 닫힌 것으로 봅니다.
+const clients = new Map();
+let seenClient = false;
+let emptySince = 0;
+
+function watchClients() {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [id, t] of clients) if (now - t > 180e3) clients.delete(id);
+    if (!seenClient || clients.size) { emptySince = 0; return; }
+    if (!emptySince) emptySince = now;
+    else if (now - emptySince >= 15e3) {
+      console.log('열린 페이지가 없어 프로그램을 끕니다.');
+      store.save();
+      process.exit(0);
+    }
+  }, 3000).unref();
+}
+
 function start(onReady) {
   server.once('error', async (err) => {
     if (err.code !== 'EADDRINUSE') throw err;
@@ -426,6 +457,7 @@ function start(onReady) {
     const url = `http://localhost:${PORT}`;
     console.log(`패션 블로거 작업 도우미가 열렸습니다 → ${url}`);
     if (!process.env.NO_SCHEDULER) scheduler.start();
+    if (process.env.AUTO_EXIT === '1') watchClients();
     if (onReady) onReady(url);
   });
 }

@@ -9,6 +9,8 @@ const PORT = Number(process.env.PORT) || 3000;
 const URL = `http://localhost:${PORT}`;
 
 if (process.argv.includes('--hidden')) {
+  // 창 없이 실행했을 때는 웹 페이지를 모두 닫으면 프로그램도 꺼집니다.
+  process.env.AUTO_EXIT = '1';
   const dir = path.join(__dirname, 'data');
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'app.log');

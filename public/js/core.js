@@ -176,5 +176,13 @@ async function route() {
   updateBell();
 }
 
+// 프로그램에 '이 페이지가 열려 있어요' 신호를 보냅니다. 페이지를 모두 닫으면 프로그램이 스스로 꺼집니다.
+const pageId = Math.random().toString(36).slice(2);
+const heartbeat = () => fetch('/api/heartbeat', { method: 'POST', body: JSON.stringify({ id: pageId }) }).catch(() => {});
+heartbeat();
+setInterval(heartbeat, 10000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') heartbeat(); });
+window.addEventListener('pagehide', () => navigator.sendBeacon('/api/bye', JSON.stringify({ id: pageId })));
+
 window.addEventListener('hashchange', route);
 window.addEventListener('DOMContentLoaded', route);
