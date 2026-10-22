@@ -10,17 +10,28 @@
 <body>
   <header class="top">
     <div class="wrap top-inner">
-      <a class="brand" href="#/">블로그 작업대<span class="brand-sub">1단계 · 주제 정하기</span></a>
+      <a class="brand" href="#/">블로그 작업대</a>
       <nav class="tabs" aria-label="메뉴">
-        <a href="#/" data-tab="home">오늘의 브리핑</a>
-        <a href="#/keywords" data-tab="keywords">키워드 기회</a>
+        <a href="#/" data-tab="home">브리핑</a>
+        <a href="#/keywords" data-tab="keywords">키워드</a>
+        <a href="#/brands" data-tab="brands">할인·신상</a>
         <a href="#/boards" data-tab="boards">상품 보드</a>
+        <a href="#/calendar" data-tab="calendar">캘린더</a>
+        <a href="#/performance" data-tab="performance">성과</a>
         <a href="#/settings" data-tab="settings">설정</a>
       </nav>
+      <a class="bell" href="#/alerts" data-tab="alerts" aria-label="내 상품 알림">🔔<span id="bellCount" hidden>0</span></a>
     </div>
   </header>
   <main id="app" class="wrap" aria-live="polite"></main>
   <div id="toast" role="status"></div>
-  <script src="/app.js"></script>
+  <script src="/js/core.js"></script>
+  <script src="/js/home.js"></script>
+  <script src="/js/keywords.js"></script>
+  <script src="/js/brands.js"></script>
+  <script src="/js/boards.js"></script>
+  <script src="/js/calendar.js"></script>
+  <script src="/js/performance.js"></script>
+  <script src="/js/settings.js"></script>
 </body>
 </html>

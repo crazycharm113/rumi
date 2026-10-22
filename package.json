@@ -1,7 +1,7 @@
 {
   "name": "fashion-blog-helper",
-  "version": "0.1.0",
-  "description": "패션 블로거 작업 도우미 (1단계: 오늘의 브리핑, 키워드 기회 분석, 상품 보드)",
+  "version": "0.2.0",
+  "description": "패션 블로거 작업 도우미: 브리핑, 키워드 기회, 할인·신상, 상품 보드, 캘린더, 포스팅 도우미, 성과 기록",
   "private": true,
   "type": "commonjs",
   "scripts": {

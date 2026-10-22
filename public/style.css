@@ -44,7 +44,7 @@ main.wrap { padding-bottom: 64px; }
 .top-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; flex-wrap: wrap; }
 .brand { font-weight: 700; font-size: 17px; text-decoration: none; display: flex; align-items: baseline; gap: 8px; }
 .brand-sub { font-size: 12px; font-weight: 500; color: var(--ink-3); }
-.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.tabs { display: flex; flex: 1; justify-content: flex-end; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .tabs a { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--ink-2); white-space: nowrap; font-size: 14px; }
 .tabs a:hover { background: var(--surface-2); }
 .tabs a.on { background: var(--ink); color: var(--bg); }
@@ -179,7 +179,89 @@ details.explain summary { cursor: pointer; font-weight: 600; color: var(--ink); 
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* 알림 종 */
+.bell { position: relative; text-decoration: none; font-size: 18px; padding: 6px 8px; border-radius: 999px; }
+.bell:hover, .bell.on { background: var(--surface-2); }
+.bell span { position: absolute; top: 0; right: -2px; background: var(--down); color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 4px; }
+.bell span[hidden] { display: none; }
+
+.sub-head { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 12px 0 6px; }
+ul.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.grow { flex: 1; min-width: 0; }
+.clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-sale { color: var(--down); }
+.tag-new { color: var(--accent); }
+
+.mini-products { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mini-products li { display: flex; gap: 10px; align-items: center; }
+.mini-products img, .mini-products .ph { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--surface-2); flex: none; }
+
+.alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.alert-list li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; }
+.alert-list li.unread { background: var(--surface-2); }
+.alert-list li.important { background: var(--down-soft); }
+.alert-list a { text-decoration: none; }
+
+.chip-btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); padding: 5px 11px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 4px; }
+.chip-btn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* 글 상태·캘린더 항목 */
+.cal-item { display: block; font-size: 12px; line-height: 1.35; padding: 2px 6px; border-radius: 6px; text-decoration: none; background: var(--surface-2); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend .cal-item, .row > .cal-item, .board-card .cal-item { display: inline-block; }
+.s-idea { background: var(--surface-2); color: var(--ink-2); }
+.s-shoot { background: var(--info-soft); color: var(--info); }
+.s-write { background: var(--warn-soft); color: var(--warn); }
+.s-done { background: var(--up-soft); color: var(--up); }
+.deadline { background: var(--down-soft); color: var(--down); font-weight: 600; }
+.ev-sale { background: #fde2e4; color: #9b2c3a; }
+.ev-launch { background: #e9e3fb; color: #553c9a; }
+.ev-etc { background: var(--surface-2); color: var(--ink-2); }
+.cal-item.cont { opacity: .55; }
+.cal-item.weather { background: var(--info-soft); color: var(--info); }
+.cal-item.suggest { background: var(--accent-soft); color: var(--accent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ev-sale { background: #3d2226; color: #f2a5b0; }
+  :root:not([data-theme="light"]) .ev-launch { background: #2c2540; color: #c4b5f5; }
+}
+.legend { gap: 6px; margin: 4px 0 10px; }
+
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-dow { text-align: center; font-size: 12px; color: var(--ink-3); padding: 4px 0; }
+.cal-dow.sun { color: var(--down); } .cal-dow.sat { color: var(--info); }
+.cal-day { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-height: 104px; padding: 6px; display: flex; flex-direction: column; gap: 3px; position: relative; }
+.cal-day.empty-cell { background: transparent; border-color: transparent; }
+.cal-day.past { opacity: .7; }
+.cal-day.today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.cal-date { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.cal-add { position: absolute; top: 4px; right: 4px; border: 0; background: transparent; color: var(--ink-3); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 6px; border-radius: 6px; opacity: 0; }
+.cal-day:hover .cal-add, .cal-add:focus-visible { opacity: 1; background: var(--surface-2); }
+
+/* 보드 상세 */
+.board-fields { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+details.more { margin-top: 10px; }
+details.more summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.table-preview { overflow-x: auto; background: #fff; color: #222; border-radius: 10px; padding: 12px; border: 1px solid var(--line); }
+.checklist { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 12px; }
+.checklist li { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.checklist li.important { background: var(--warn-soft); }
+.template { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
+.template pre { flex: 1; margin: 0; white-space: pre-wrap; font: inherit; font-size: 13.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+
+.post-row h3 { margin: 4px 0 0; font-size: 16px; }
+.post-row .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; }
+.post-row .field b { font-variant-numeric: tabular-nums; }
+
+dialog.dlg { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); padding: 20px; width: min(420px, calc(100% - 32px)); }
+dialog.dlg::backdrop { background: rgba(0, 0, 0, .35); }
+dialog.dlg h2 { margin: 0; }
+
 @media (max-width: 640px) {
+  .cal { gap: 2px; }
+  .cal-day { min-height: 70px; padding: 3px; border-radius: 6px; }
+  .cal-item { font-size: 10px; padding: 1px 3px; }
+  .brand { flex: 1; }
+  .tabs { flex: 0 0 100%; order: 3; justify-content: flex-start; }
+
   h1 { font-size: 21px; }
   .top-inner { padding-top: 8px; padding-bottom: 8px; gap: 6px; }
   .brand-sub { display: none; }
@@ -188,3 +270,5 @@ details.explain summary { cursor: pointer; font-weight: 600; color: var(--ink); 
   .product .img { width: 64px; height: 64px; }
   .hbar { grid-template-columns: 84px 1fr 36px; }
 }
+.checklist label.row { flex-wrap: nowrap; align-items: flex-start; }
+.checklist label.row input { margin-top: 4px; flex: none; }

@@ -65,5 +65,5 @@ test('상품 페이지 파싱: JSON-LD 우선, og 태그 보조', () => {
       "offers":{"@type":"Offer","price":"129000","availability":"https://schema.org/InStock"}}</script>
     <meta property="product:original_price:amount" content="159000"></head></html>`;
   const p = parse(html, new URL('https://shop.example.com/p/1'));
-  assert.deepStrictEqual(p, { name: '울 블렌드 트렌치코트', brand: '브랜드A', price: 129000, originalPrice: 159000, image: 'https://shop.example.com/img/a.jpg', soldOut: null });
+  assert.deepStrictEqual(p, { name: '울 블렌드 트렌치코트', brand: '브랜드A', price: 129000, originalPrice: 159000, image: 'https://shop.example.com/img/a.jpg', soldOut: false });
 });
