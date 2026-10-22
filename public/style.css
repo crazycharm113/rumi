@@ -289,3 +289,8 @@ dialog.dlg h2 { margin: 0; }
 .cal-item.prepare { background: var(--accent); color: #fff; border: 0; cursor: pointer; font: inherit; font-size: 12px; text-align: left; width: 100%; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cal-item.peak { background: #3a2f17; color: #e9b955; } }
 .intent-slot { display: inline-block; width: 44px; text-align: left; margin-left: 4px; }
+.chip.written { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.stats > div { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.stats b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.post-row h3 .chip, .post-row h3 .chip-btn { font-size: 12px; vertical-align: middle; }

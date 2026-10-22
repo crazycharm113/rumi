@@ -15,7 +15,7 @@ test('블로그 글 수 전일 대비: 기록과 비교, 기록 없으면 비움
   Object.assign(db.settings, { naverClientId: 'x', naverClientSecret: 'y', keywords: ['니트', '셔켓'] });
   naver.trend = async (s, words) => Object.fromEntries(words.map((w) => [w, { series: Array(14).fill(10), anchorAvg: 10 }]));
   let counts = { 니트: 1000, 셔켓: 500 };
-  naver.blogCount = async (s, w) => counts[w];
+  naver.blogStats = async (s, w) => ({ total: counts[w], topDates: ['20250101', '20260101'] });
   shopinsight.buyingInterest = async () => ({});
 
   let r = await service.getKeywordRows();

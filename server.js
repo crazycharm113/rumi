@@ -15,6 +15,7 @@ const helper = require('./lib/helper');
 const perf = require('./lib/performance');
 const brandnews = require('./lib/brandnews');
 const scheduler = require('./lib/scheduler');
+const report = require('./lib/report');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -201,6 +202,11 @@ const routes = [
   ['GET', /^\/api\/topics$/, (m, b, q) => service.getTopics(q.get('age') || 'all')],
   ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
+  ['GET', /^\/api\/backups$/, () => ({ backups: store.listBackups() })],
+  ['POST', /^\/api\/backups$/, () => ({ name: store.backupToday({ force: true }), backups: store.listBackups() })],
+  ['POST', /^\/api\/backups\/(db-[\d-]+\.json)\/restore$/, (m) => { store.restoreBackup(m[1]); return { ok: true }; }],
+  ['GET', /^\/api\/export$/, () => store.load()],
+  ['POST', /^\/api\/import$/, (m, body) => { store.replaceAll(body); return { ok: true }; }],
   ['POST', /^\/api\/refresh$/, () => { store.clearCache(); return { ok: true }; }],
   ['POST', /^\/api\/heartbeat$/, (m, body) => {
     clients.set(String(body.id || '').slice(0, 40), Date.now());
@@ -344,6 +350,14 @@ const routes = [
     const db = store.load();
     return { blogId: db.settings.blogId, hasNaver: service.hasNaver(db.settings), posts: db.posts, summary: perf.topicSummary(db.posts), lastSync: db.jobs.rss || '', error: db.jobs.rssError || '' };
   }],
+  ['GET', /^\/api\/report$/, async (m, b, q) => {
+    // 기본은 지난주(월~일). week=this 면 이번 주.
+    const thisMonday = report.mondayOf(store.kstDate());
+    const start = q.get('week') === 'this' ? thisMonday : report.addDays(thisMonday, -7);
+    const peaks = await service.getPeaks();
+    return report.weekly(store.load(), start, { peaks: peaks.peaks || {} });
+  }],
+  ['POST', /^\/api\/posts\/index-check$/, async (m, body) => ({ checked: await perf.checkIndexing({ only: body.logNo }) })],
   ['POST', /^\/api\/posts\/sync$/, async () => { await perf.syncPosts(); return { ok: true }; }],
   ['PUT', /^\/api\/posts\/(\w+)$/, (m, body) => {
     const p = findPost(m[1]);
@@ -388,11 +402,15 @@ function send(res, status, data) {
 }
 
 async function readBody(req) {
-  let raw = '';
+  // 한글이 조각 경계에서 깨지지 않도록 바이트로 모은 뒤 한 번에 글자로 바꿉니다.
+  const chunks = [];
+  let size = 0;
   for await (const chunk of req) {
-    raw += chunk;
-    if (raw.length > 1e6) throw httpError(413, '요청이 너무 큽니다.');
+    chunks.push(chunk);
+    size += chunk.length;
+    if (size > 50e6) throw httpError(413, '요청이 너무 큽니다.');
   }
+  const raw = Buffer.concat(chunks).toString('utf8');
   if (!raw) return {};
   try { return JSON.parse(raw); } catch { throw httpError(400, '잘못된 요청입니다.'); }
 }

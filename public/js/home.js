@@ -10,6 +10,7 @@ views.home = async () => {
     ${dataBanner(b.keywordsMeta, '키워드 데이터')}
     ${b.shopError ? `<div class="banner stale">쇼핑인사이트를 가져오지 못해 구매 관심도 없이 보여드려요: ${esc(b.shopError)}</div>` : ''}
 
+    ${[1, 2].includes(new Date().getDay()) ? `<div class="banner" style="background:var(--info-soft);color:var(--info)">📊 지난주 리포트가 준비됐어요. <a href="#/performance">성과에서 보기 →</a></div>` : ''}
     <section class="section card">${weatherBar(b.weather)}</section>
 
     <section class="section">
@@ -188,12 +189,13 @@ function brandFeedSummary(f) {
       <a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer" class="clip" style="display:block">${esc(p.title)}</a></div></li>`).join('')}</ul>`;
 }
 
-const ALERT_ICON = { price_drop: '⬇️', price_up: '⬆️', sold_out: '⛔', fix_post: '✏️', restock: '🔄' };
+// 알림 종류: 저장 상품 가격·품절, 발행 글 검색 누락
+const ALERT_ICON = { not_indexed: '🔍', price_drop: '⬇️', price_up: '⬆️', sold_out: '⛔', fix_post: '✏️', restock: '🔄' };
 
 function alertRow(a) {
   return `<li class="${a.read ? '' : 'unread'} ${a.kind === 'fix_post' ? 'important' : ''}">
     <span aria-hidden="true">${ALERT_ICON[a.kind] || '•'}</span>
-    <div class="grow"><a href="#/boards/${a.boardId}"><b>${esc(a.productName)}</b></a>
+    <div class="grow"><a href="${esc(a.link || `#/boards/${a.boardId}`)}"><b>${esc(a.productName)}</b></a>
       <div class="small">${esc(a.text)}</div>
       <div class="small muted">${esc(a.boardTitle)} · ${esc(mmdd(a.date))}</div></div>
   </li>`;

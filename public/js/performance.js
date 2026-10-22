@@ -23,6 +23,8 @@ views.performance = async () => {
       <button class="btn sm" id="sync">글 목록 새로 가져오기</button>
     </div>
 
+    <section class="section card" id="report"><div class="skeleton">주간 리포트를 만드는 중…</div></section>
+
     <section class="section card">
       <h2>어떤 주제가 잘 되나</h2>
       ${d.summary.length ? `<div class="table-wrap" style="border:0"><table>
@@ -42,7 +44,7 @@ views.performance = async () => {
         return `<article class="card post-row" data-log="${esc(p.logNo)}">
           <div class="row"><span class="small muted">${esc(p.pubDate)}${p.category ? ` · ${esc(p.category)}` : ''}</span><span class="spacer"></span>
             <a class="btn ghost sm" href="${esc(p.link)}" target="_blank" rel="noopener noreferrer">글 보기 ↗</a></div>
-          <h3>${esc(p.title)}</h3>
+          <h3>${esc(p.title)} ${indexBadge(p)}</h3>
           <div class="fields">
             <label class="field">검색 키워드<input data-k value="${esc(p.keyword || '')}" placeholder="예: 트렌치코트"></label>
             <label class="field">연결한 상품 보드<select data-board><option value="">없음</option>${boards.map((b) => `<option value="${b.id}" ${b.id === p.boardId ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select></label>
@@ -57,6 +59,12 @@ views.performance = async () => {
       </div>
     </section>`;
 
+  renderReport(reportWeek);
+  $app.querySelectorAll('[data-index]').forEach((el) => el.addEventListener('click', async () => {
+    el.disabled = true; el.textContent = '확인 중…';
+    try { await api('/api/posts/index-check', { method: 'POST', body: { logNo: el.dataset.index } }); } catch (err) { toast(err.message); }
+    route();
+  }));
   document.getElementById('sync').addEventListener('click', async (e) => {
     e.target.disabled = true; e.target.textContent = '가져오는 중…';
     try { await api('/api/posts/sync', { method: 'POST' }); toast('글 목록을 가져왔어요'); } catch (err) { toast(err.message); }
@@ -87,3 +95,52 @@ views.performance = async () => {
     });
   });
 };
+
+// 검색 노출 상태 (발행 후 10일 동안 제목으로 검색해 확인)
+function indexBadge(p) {
+  const i = p.index;
+  const recent = p.pubDate >= kstDate(-10);
+  if (!i) return recent ? `<button class="chip-btn" data-index="${esc(p.logNo)}" title="제목으로 검색해 내 글이 나오는지 확인">🔍 노출 확인</button>` : '';
+  if (i.status === 'ok') return `<span class="chip up" title="${esc(i.since)} 확인">✅ 검색 노출</span>`;
+  if (i.status === 'missing') return `<span class="chip down" title="${esc(i.checkedAt)} 확인">⚠️ 누락 의심 (발행 ${i.age}일째)</span> <button class="chip-btn" data-index="${esc(p.logNo)}">다시 확인</button>`;
+  return `<span class="chip" title="발행 당일은 아직 안 보일 수 있어요">⏳ 노출 대기</span>`;
+}
+
+let reportWeek = 'last';
+
+async function renderReport(week) {
+  reportWeek = week;
+  const box = document.getElementById('report');
+  if (!box) return;
+  let r;
+  try { r = await api(`/api/report?week=${week}`); } catch (err) { box.innerHTML = `<p class="muted">리포트를 만들지 못했어요: ${esc(err.message)}</p>`; return; }
+  const range = `${mmdd(r.from)} ~ ${mmdd(r.to)}`;
+  const nextLabel = week === 'last' ? '이번 주' : '다음 주'; // 지난주 리포트의 '다음 주'는 이번 주
+  const list = (items, fn, empty) => (items.length ? `<ul class="plain">${items.map(fn).join('')}</ul>` : `<p class="small muted">${empty}</p>`);
+  box.innerHTML = `
+    <div class="section-head"><h2>주간 리포트 <span class="small muted">${esc(range)}</span></h2>
+      <div class="subtabs"><button class="${week === 'last' ? 'on' : ''}" data-week="last">지난주</button><button class="${week === 'this' ? 'on' : ''}" data-week="this">이번 주</button></div></div>
+    <div class="stats">
+      <div><div class="small muted">발행한 글</div><b>${r.published.length}개</b></div>
+      <div><div class="small muted">늘어난 조회수</div><b>${num(r.totalViews)}</b></div>
+      <div><div class="small muted">검색 누락 의심</div><b class="${r.missing.length ? 'tag-sale' : ''}">${r.missing.length}개</b></div>
+      <div><div class="small muted">${nextLabel} 예정</div><b>${r.plans.length}개</b></div>
+    </div>
+    ${r.viewsMissing ? `<p class="chip warn">이번 기간에 발행한 글 ${r.viewsMissing}개는 조회수를 아직 안 넣었어요. 아래 글 목록에서 입력하면 리포트가 정확해져요.</p>` : ''}
+    <div class="grid grid-2" style="margin-top:12px">
+      <div><div class="sub-head">조회수가 많이 늘어난 글</div>
+        ${list(r.topPosts, (x) => `<li class="row"><a class="spacer" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a><b>+${num(x.gained)}</b></li>`, '조회수를 입력하면 보여요.')}</div>
+      <div><div class="sub-head">잘된 주제 (키워드별 조회수)</div>
+        ${list(r.topKeywords, (x) => `<li class="row"><span class="spacer">${esc(x.keyword)}</span><b>+${num(x.views)}</b></li>`, '글에 검색 키워드를 넣으면 주제별로 묶어 보여요.')}</div>
+      <div><div class="sub-head">좋은 검색 순위</div>
+        ${list(r.ranks, (x) => `<li class="row"><span class="spacer">${esc(x.title)} <span class="small muted">'${esc(x.keyword)}'</span></span><b>${x.rank}위</b></li>`, '이 기간에 100위 안에 든 기록이 없어요.')}</div>
+      <div><div class="sub-head">${nextLabel} 계획 (${esc(mmdd(r.next.from))} ~ ${esc(mmdd(r.next.to))})</div>
+        ${list([...r.plans.map((x) => ({ ...x, kind: 'plan' })), ...r.prepare.map((x) => ({ ...x, kind: 'prep' }))],
+          (x) => x.kind === 'plan'
+            ? `<li class="row"><span class="small muted" style="width:44px">${esc(mmdd(x.date))}</span><a class="spacer" href="#/boards/${x.id}">${esc(x.title)}</a><span class="cal-item ${POST_STATUS_CLASS[x.status] || ''}">${esc(x.status)}</span></li>`
+            : `<li class="row"><span class="small muted" style="width:44px">${esc(mmdd(x.prepare))}</span><span class="spacer">✍️ ${esc(x.word)} 글 준비 시작 <span class="small muted">(작년 정점 ${esc(mmdd(x.peak))})</span></span></li>`,
+          '잡힌 일정이 없어요. 브리핑의 주제를 캘린더에 올려 보세요.')}</div>
+    </div>
+    ${r.missing.length ? `<div class="sub-head">검색 누락 의심 글</div>${list(r.missing, (x) => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a></li>`, '')}` : ''}`;
+  box.querySelectorAll('[data-week]').forEach((b) => b.addEventListener('click', () => renderReport(b.dataset.week)));
+}

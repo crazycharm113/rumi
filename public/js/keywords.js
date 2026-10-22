@@ -38,6 +38,7 @@ views.keywords = async (parts, params) => {
 
 function scoreTable(rows, focus) {
   const k = kwState.sort;
+  rows = rows.map((r) => ({ ...r, freshAge: r.freshness ? r.freshness.medianAge : null }));
   const sorted = [...rows].sort((a, b) => {
     const x = a[k], y = b[k];
     if (x == null) return 1;
@@ -52,6 +53,7 @@ function scoreTable(rows, focus) {
       <p><b>기회 점수 = 관심도 변화 지수 ÷ log<sub>10</sub>(블로그 글 수 + 10)</b></p>
       <ul>
         <li><b>관심도 변화 지수</b>: 네이버 데이터랩 검색어트렌드에서 최근 7일 평균 ÷ 그 전 7일 평균 × 100 (100이면 변화 없음).</li>
+        <li><b>상위 글 나이</b>: 그 키워드로 검색했을 때 상위 10개 블로그 글의 작성일 중간값(일)과 6개월 넘은 글 비율. 오래된 글이 60% 이상이면 새 글이 치고 들어갈 기회로 보고 오늘의 주제 순위에 가산합니다.</li>
         <li><b>글 수 전일 대비</b>: 블로그 글 수를 날마다 기록해 어제 기록과 비교한 증가 건수. 하루 이상 비어 있으면 가장 최근 기록과 비교하고 (n일)로 표시합니다. 많이 늘수록 다른 블로거들도 지금 쓰고 있다는 뜻이에요.</li>
         <li><b>블로그 글 수</b>: 네이버 블로그 검색 결과 총 건수(근사치). 글이 10배 많으면 점수가 한 단계 내려가도록 로그를 썼습니다.</li>
         <li><b>쇼핑 클릭 변화</b>: 네이버 쇼핑인사이트에서 최근 7일 클릭 ÷ 그 전 7일. 있으면 관심도 변화 지수를 '검색 지수와 클릭 지수의 평균'으로 계산해 구매 관심을 반영합니다.
@@ -69,6 +71,7 @@ function scoreTable(rows, focus) {
         ${head('level', '관심 수준', 'num')}
         ${head('posts', '블로그 글 수', 'num')}
         ${head('postsDelta', '글 수 전일 대비', 'num')}
+        ${head('freshAge', '상위 글 나이', 'num')}
         ${head('score', '기회 점수')}
         <th></th>
       </tr></thead>
@@ -83,6 +86,7 @@ function scoreTable(rows, focus) {
         <td class="num" ${r.postsDeltaDays > 1 ? `title="${r.postsDeltaDays}일 전 기록과 비교"` : ''}>${r.postsDelta == null
           ? '<span class="muted" title="오늘부터 기록해서 내일부터 보여요">–</span>'
           : `<span class="pct ${r.postsDelta > 0 ? 'up' : r.postsDelta < 0 ? 'down' : ''}">${r.postsDelta > 0 ? '+' : ''}${num(r.postsDelta)}</span>${r.postsDeltaDays > 1 ? `<span class="small muted"> (${r.postsDeltaDays}일)</span>` : ''}`}</td>
+        <td class="num" title="상위 10개 글의 작성일 중간값 · 6개월 넘은 글 비율">${r.freshness ? `${r.freshness.medianAge}일 <span class="small ${r.freshness.oldShare >= 60 ? 'tag-new' : 'muted'}">(${r.freshness.oldShare}% 오래됨)</span>` : '<span class="muted">–</span>'}</td>
         <td><span class="bar" style="width:${Math.round(((r.score || 0) / maxScore) * 90)}px"></span><span class="score">${r.score ?? '–'}</span></td>
         <td><button class="btn sm" data-word="${esc(r.word)}" onclick="makeBoard(this.dataset.word, this.dataset.word + ' 코디')">보드 만들기</button></td>
       </tr>`).join('')}</tbody>

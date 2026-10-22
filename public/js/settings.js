@@ -65,6 +65,17 @@ views.settings = async () => {
         <label class="field">GitHub 토큰 (선택)<input name="githubToken" type="password" value="${esc(s.githubToken)}" autocomplete="off" placeholder="github_pat_..."></label>
       </section>
 
+      <section class="card grid" id="backupBox">
+        <h2>백업</h2>
+        <p class="small muted" style="margin:0">하루 한 번 자동으로 백업해 최근 7일 치를 <code>data\\backup</code> 폴더에 보관해요. 다른 PC로 옮길 때는 내보낸 파일을 그 PC에서 가져오면 돼요. 내보낸 파일에는 API 키도 들어 있으니 공개된 곳에 올리지 마세요.</p>
+        <div class="row">
+          <button class="btn" type="button" onclick="exportData()">내보내기 (파일 저장)</button>
+          <label class="btn" style="cursor:pointer">가져오기<input type="file" accept=".json,application/json" hidden onchange="importData(this.files[0])"></label>
+          <button class="btn ghost" type="button" onclick="backupNow()">지금 백업</button>
+        </div>
+        <div id="backupList" class="small muted">백업 목록을 불러오는 중…</div>
+      </section>
+
       <div class="row">
         <button class="btn primary">저장</button>
         <button class="btn" type="button" onclick="refreshAll()">저장한 데이터 비우고 새로 가져오기</button>
@@ -73,6 +84,7 @@ views.settings = async () => {
       </div>
     </form>`;
 
+  renderBackups();
   document.getElementById('sForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
@@ -93,4 +105,48 @@ async function shutdownApp() {
   if (!confirm('블로그 작업대를 끌까요? 다시 쓰려면 "블로그 작업대.vbs"를 실행하세요.')) return;
   await api('/api/shutdown', { method: 'POST' }).catch(() => {});
   $app.innerHTML = '<h1>프로그램을 껐어요</h1><div class="card"><p>이 창을 닫아도 돼요. 다시 쓰려면 폴더의 <b>블로그 작업대.vbs</b>를 실행하세요.</p></div>';
+}
+
+async function renderBackups() {
+  const box = document.getElementById('backupList');
+  if (!box) return;
+  const { backups } = await api('/api/backups');
+  box.innerHTML = backups.length
+    ? `<ul class="plain">${backups.map((b) => `<li class="row"><span class="spacer">${esc(b.date)} 백업 <span class="muted">(${Math.round(b.size / 1024)}KB)</span></span>
+        <button class="btn ghost sm" type="button" data-restore="${esc(b.name)}">이걸로 되돌리기</button></li>`).join('')}</ul>`
+    : '아직 백업이 없어요.';
+  box.querySelectorAll('[data-restore]').forEach((el) => el.addEventListener('click', async () => {
+    if (!confirm(`${el.dataset.restore.slice(3, 13)} 백업으로 되돌릴까요? 지금 데이터는 오늘 날짜로 먼저 백업해 둬요.`)) return;
+    await api(`/api/backups/${el.dataset.restore}/restore`, { method: 'POST' });
+    toast('되돌렸어요');
+    route();
+  }));
+}
+
+async function backupNow() {
+  await api('/api/backups', { method: 'POST' });
+  toast('백업했어요');
+  renderBackups();
+}
+
+async function exportData() {
+  const data = await api('/api/export');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `blog-helper-backup-${kstDate()}.json` });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function importData(file) {
+  if (!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { return toast('읽을 수 없는 파일이에요.'); }
+  if (!confirm('이 파일의 데이터로 바꿀까요? 지금 데이터는 오늘 날짜로 먼저 백업해 둬요.')) return;
+  try {
+    await api('/api/import', { method: 'POST', body: data });
+    toast('가져왔어요');
+    route();
+  } catch (err) { toast(err.message); }
 }
