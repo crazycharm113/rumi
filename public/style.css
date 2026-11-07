@@ -363,3 +363,8 @@ dialog.dlg h2 { margin: 0; }
 .look-detail .pieces > li { grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; }
 .look-detail .piece-actions { grid-column: 3; margin-left: 0; }
 @media (max-width: 640px) { .look-detail .pieces > li { grid-template-columns: 44px 1fr; } .look-detail .piece-actions { grid-column: 2; } }
+
+.look-blogs { margin: 10px 0 8px; padding: 8px 12px; background: var(--surface); border-radius: 10px; }
+.blog-list { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.blog-list a { text-decoration: none; }
+.blog-list a:hover { text-decoration: underline; }

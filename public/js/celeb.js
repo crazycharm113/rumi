@@ -108,6 +108,19 @@ function lookRow(l, maxScore) {
     </tr>${open ? `<tr class="look-detail"><td colspan="9">${lookDetail(l)}</td></tr>` : ''}`;
 }
 
+// 이미 이 착장(이름 + 대표 아이템)으로 쓰인 블로그 상위 글
+function blogList(l) {
+  const blogs = l.score?.blogs;
+  if (blogs == null) return '';
+  const fmt = (d) => (d && d.length === 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}` : '');
+  return `<div class="look-blogs"><div class="small muted">이미 '${esc(l.celeb)} ${esc(l.main)}'으로 쓰인 블로그 상위 글</div>
+    ${blogs.length ? `<ol class="blog-list">${blogs.map((b) => `<li>
+      <a href="${esc(b.link)}" target="_blank" rel="noopener noreferrer">${esc(b.title)}&nbsp;↗</a>
+      ${b.mine ? '<span class="chip up">내 글</span>' : ''}
+      <span class="small muted">${esc(b.blogger)}${b.date ? ` · ${esc(fmt(b.date))}` : ''}</span></li>`).join('')}</ol>`
+      : '<p class="small" style="margin:4px 0">아직 이 착장으로 쓴 글이 거의 없어요. 먼저 쓰면 상위에 오를 기회예요.</p>'}</div>`;
+}
+
 function lookDetail(l) {
   return `<ul class="pieces">${l.pieces.map((p) => `<li data-piece="${esc(p.id)}">
       <span class="piece-cat">${esc(p.category)}</span>
@@ -120,6 +133,7 @@ function lookDetail(l) {
       </span>
       <div class="similar" hidden></div>
     </li>`).join('')}</ul>
+    ${blogList(l)}
     <div class="row small">출처 기사: ${l.articles.slice(0, 4).map((a, i) => `<a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(a.title)}">기사${l.articles.length > 1 ? ` ${i + 1}` : ''}&nbsp;↗</a>`).join(' ')}
       ${l.articles.length > 4 ? `<span class="muted">외 ${l.articles.length - 4}건</span>` : ''}</div>`;
 }

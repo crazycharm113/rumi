@@ -53,7 +53,7 @@ test('Claude 요청: Opus 5.5, 거절 시 기본 대체, JSON 스키마, 사용�
 
 test('셀럽 착장 수집: 최근 기사만, 같은 기사 묶기, 본 기사는 다시 안 보냄', async () => {
   const db = store.load();
-  Object.assign(db.settings, { naverClientId: 'x', naverClientSecret: 'y', anthropicApiKey: 'sk-test', celebs: ['문가영'] });
+  Object.assign(db.settings, { naverClientId: 'x', naverClientSecret: 'y', anthropicApiKey: 'sk-test', celebs: ['문가영'], blogId: 'mylog' });
   const now = new Date().toUTCString();
   const old = new Date(Date.now() - 20 * 864e5).toUTCString();
   const queries = [];
@@ -77,7 +77,14 @@ test('셀럽 착장 수집: 최근 기사만, 같은 기사 묶기, 본 기사�
     ] })();
   };
   naver.trend = async (s, names) => Object.fromEntries(names.map((n) => [n, { series: n === '문가영' ? [...Array(7).fill(10), ...Array(7).fill(20)] : Array(14).fill(10), anchorAvg: 10 }]));
-  naver.blogStats = async (s, q) => ({ total: q.startsWith('문가영') ? 50 : 50000, topDates: ['20240101', '20240201', '20240301'] });
+  naver.blogStats = async (s, q) => ({
+    total: q.startsWith('문가영') ? 50 : 50000, topDates: ['20240101', '20240201', '20240301'],
+    items: q.startsWith('문가영') ? [
+      { title: '문가영 트렌치코트 공항패션 정리', description: '', link: 'https://blog.naver.com/other/1', blogger: '다른블로거', postdate: '20240101' },
+      { title: '가을 트렌치코트 추천', description: '아무 상관 없는 글', link: 'https://blog.naver.com/other/2', blogger: 'x', postdate: '20240201' },
+      { title: '트렌치코트 코디', description: '문가영이 입은 버버리', link: 'https://blog.naver.com/mylog/3', blogger: '나', postdate: '20240301' },
+    ] : [],
+  });
   await celeb.refresh();
   assert.ok(queries.includes('문가영 패션'));
   const v = celeb.view();
@@ -93,6 +100,9 @@ test('셀럽 착장 수집: 최근 기사만, 같은 기사 묶기, 본 기사�
   assert.strictEqual(look.score.posts, 50);
   assert.ok(look.score.score > other.score.score);
   assert.ok(look.hot && !other.hot);
+  // 이미 쓰인 글: 이름이 들어간 글만, 내 글 표시
+  assert.deepStrictEqual(look.score.blogs.map((b) => [b.link, b.mine]), [['https://blog.naver.com/other/1', false], ['https://blog.naver.com/mylog/3', true]]);
+  assert.deepStrictEqual(other.score.blogs, []);
 
   const calls = sent.length;
   await celeb.refresh(); // 새 기사가 없으면 Claude를 부르지 않음
