@@ -143,6 +143,12 @@ test('고치기·숨기기, 이미 쓴 착장, 이 옷으로 글 만들기', () 
   assert.deepStrictEqual(board.products.map((p) => p.name), ['버버리 런던 켄싱턴 트렌치', '로퍼']); // 옷 + 같이 입은 아이템
   assert.ok(board.memo.includes('https://news/a'));
   assert.strictEqual(db.boards[0].id, board.id);
+
+  // 한 줄로 묶인 여러 옷을 한 번에 담기
+  const two = celeb.view().hots.filter((h) => h.celeb === '문가영').slice(0, 2);
+  assert.ok(two.length >= 2);
+  const multi = celeb.boardFromHot('', { hotIds: two.map((h) => h.id) });
+  assert.ok(two.every((h) => multi.products.some((p) => p.name.includes(h.product || h.item))));
 });
 
 test('상황 키워드 짐작과 착장 이름', () => {

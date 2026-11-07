@@ -368,3 +368,13 @@ dialog.dlg h2 { margin: 0; }
 .blog-list { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
 .blog-list a { text-decoration: none; }
 .blog-list a:hover { text-decoration: underline; }
+
+/* 한 줄에 여러 옷: 칸마다 옷 한 줄씩, 같은 높이로 줄 맞춤 */
+.look-table .look-row td { vertical-align: top; }
+.look-table td.lines { padding-top: 8px; padding-bottom: 8px; }
+.look-table .pl { display: flex; align-items: center; gap: 5px; height: 28px; white-space: nowrap; overflow: hidden; }
+.look-table td.lines.num .pl { justify-content: flex-end; }
+.look-table .pl .chip { padding-top: 0; padding-bottom: 0; line-height: 18px; }
+.look-table .look-row td.nowrap, .look-table .look-row td.num { padding-top: 8px; line-height: 28px; }
+.hot-piece { padding: 6px 0 10px; border-bottom: 1px dashed var(--line); }
+.hot-piece:last-of-type { border-bottom: 0; }

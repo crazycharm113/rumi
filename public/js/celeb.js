@@ -10,37 +10,58 @@ views.celeb = async () => {
   renderCeleb();
 };
 
-function filteredHots(d, skipPerson = false) {
+let celebGroupMap = new Map();
+
+// 같은 사람이 같은 자리(키워드)에서 입은 옷은 한 줄로 합칩니다. 줄 안에서는 옷마다 블로그 수를 따로 보여줘요.
+function filteredGroups(d) {
   const since = kstDate(-(celebUI.days - 1));
-  let list = d.hots.filter((h) => h.date >= since);
-  if (celebUI.person && !skipPerson) list = list.filter((h) => h.celeb === celebUI.person);
-  if (celebUI.favOnly) list = list.filter((h) => h.favorite);
-  if (celebUI.hideWritten) list = list.filter((h) => !h.written);
-  if (celebUI.cat) list = list.filter((h) => h.category === celebUI.cat);
-  if (celebUI.situation) list = list.filter((h) => h.situation === celebUI.situation);
-  if (celebUI.brandOnly) list = list.filter((h) => h.brand);
+  let hots = d.hots.filter((h) => h.date >= since);
+  if (celebUI.favOnly) hots = hots.filter((h) => h.favorite);
+  if (celebUI.hideWritten) hots = hots.filter((h) => !h.written);
+  if (celebUI.cat) hots = hots.filter((h) => h.category === celebUI.cat);
+  if (celebUI.situation) hots = hots.filter((h) => h.situation === celebUI.situation);
+  if (celebUI.brandOnly) hots = hots.filter((h) => h.brand);
   // 블로그에 거의 안 쓰인 옷은 기본으로 숨깁니다 (블로그 수를 아직 못 구한 옷은 그대로 둠)
-  const quiet = list.filter((h) => h.score && h.score.blog7 < d.minBlog7).length;
-  if (celebUI.hideQuiet) list = list.filter((h) => !h.score || h.score.blog7 >= d.minBlog7);
-  const val = (h) => ({
-    celeb: h.celeb, situation: h.situation, brand: h.brand, name: h.product || h.item, articles: h.articles.length, score: h.score?.score ?? null,
-    blog7: h.score?.blog7 ?? null, blog3: h.score?.blog3 ?? null, posts: h.score?.posts ?? null, date: h.date,
+  const quiet = hots.filter((h) => h.score && h.score.blog7 < d.minBlog7).length;
+  if (celebUI.hideQuiet) hots = hots.filter((h) => !h.score || h.score.blog7 >= d.minBlog7);
+
+  const map = new Map();
+  for (const h of hots) {
+    const key = `${h.celeb}|${h.situation}`;
+    const g = map.get(key) || { id: key, celeb: h.celeb, situation: h.situation, favorite: h.favorite, pieces: [], buzz: false, hot: false, written: true, date: '' };
+    g.pieces.push(h);
+    g.buzz ||= h.buzz; g.hot ||= h.hot; g.written &&= h.written;
+    if (h.date > g.date) g.date = h.date;
+    map.set(key, g);
+  }
+  const num0 = (v) => (v == null ? -1 : v);
+  let groups = [...map.values()].map((g) => {
+    g.pieces.sort((a, b) => num0(b.score?.score) - num0(a.score?.score) || b.date.localeCompare(a.date));
+    g.links = [...new Map(g.pieces.flatMap((p) => p.articles).map((a) => [a.link, a])).values()];
+    const best = (f) => { const v = g.pieces.map(f).filter((x) => x != null); return v.length ? Math.max(...v) : null; };
+    g.m = { score: best((p) => p.score?.score), blog7: best((p) => p.score?.blog7), blog3: best((p) => p.score?.blog3), posts: best((p) => p.score?.posts) };
+    return g;
+  });
+  const people = [...new Set(groups.map((g) => g.celeb))].sort((a, b) => a.localeCompare(b, 'ko'));
+  if (celebUI.person) groups = groups.filter((g) => g.celeb === celebUI.person);
+  const val = (g) => ({
+    celeb: g.celeb, situation: g.situation, brand: g.pieces[0].brand, name: g.pieces[0].product || g.pieces[0].item, articles: g.links.length,
+    score: g.m.score, blog7: g.m.blog7, blog3: g.m.blog3, posts: g.m.posts, date: g.date,
   }[celebUI.sort]);
-  list.sort((a, b) => {
+  groups.sort((a, b) => {
     const x = val(a), y = val(b);
     if (x == null) return 1;
     if (y == null) return -1;
     return (typeof x === 'string' ? x.localeCompare(y, 'ko') : x - y) * celebUI.dir || b.date.localeCompare(a.date);
   });
-  return { list, quiet };
+  celebGroupMap = new Map(groups.map((g) => [g.id, g]));
+  return { list: groups, quiet, people };
 }
 
 function renderCeleb() {
   const d = celebData;
   const missing = [d.needs.claude && 'Claude API 키', d.needs.naver && '네이버 API 키(검색 - 뉴스 포함)'].filter(Boolean).join('와 ');
-  // 사람 목록은 지금 걸어 둔 필터(기간·키워드 등)에서 보이는 사람만 (사람 선택은 빼고 셉니다)
-  const people = [...new Set(filteredHots(d, true).list.map((h) => h.celeb))].sort((a, b) => a.localeCompare(b, 'ko'));
-  const { list, quiet } = filteredHots(d);
+  const { list, quiet, people } = filteredGroups(d); // 사람 목록은 지금 걸어 둔 필터에서 보이는 사람만
   const chipBtn = (key, value, label) => `<button class="chip-btn ${celebUI[key] === value ? 'on' : ''}" data-set="${key}" data-val="${esc(String(value))}">${esc(label)}</button>`;
   const sitCount = (s) => d.hots.filter((h) => h.situation === s).length;
 
@@ -75,13 +96,13 @@ function renderCeleb() {
       </div>
     </section>
 
-    ${list.length ? hotTable(list) : `<div class="card empty section">조건에 맞는 착장이 없어요.${quiet && celebUI.hideQuiet ? ' 블로그에 거의 안 쓰인 옷 숨기기를 끄면 더 보여요.' : ''}</div>`}
+    ${list.length ? groupTable(list) : `<div class="card empty section">조건에 맞는 착장이 없어요.${quiet && celebUI.hideQuiet ? ' 블로그에 거의 안 쓰인 옷 숨기기를 끄면 더 보여요.' : ''}</div>`}
     <p class="small muted section">기사 제목·요약만 저장하고 본문과 사진은 저장하지 않아요. 블로그에 기사 문장이나 보도 사진을 그대로 옮기면 저작권 문제가 생길 수 있으니, 출처를 밝히고 직접 쓴 문장과 직접 찍은·허락받은 사진을 써 주세요.</p>`;
   bindCeleb();
 }
 
-function hotTable(list) {
-  const maxScore = Math.max(...list.map((h) => h.score?.score || 0), 1);
+function groupTable(list) {
+  const maxScore = Math.max(...list.map((g) => g.m.score || 0), 1);
   const head = (key, label, cls = '') => `<th class="${cls}" aria-sort="${celebUI.sort === key ? (celebUI.dir > 0 ? 'ascending' : 'descending') : 'none'}">
     <button data-sortcol="${key}">${label}${celebUI.sort === key ? (celebUI.dir > 0 ? ' ↑' : ' ↓') : ''}</button></th>`;
   return `<div class="table-wrap section"><table class="look-table">
@@ -90,28 +111,29 @@ function hotTable(list) {
       ${head('blog7', '7일 블로그', 'num')}${head('blog3', '3일', 'num')}${head('posts', '전체 글', 'num')}${head('articles', '기사', 'num')}
       ${head('score', '점수')}<th></th>
     </tr></thead>
-    <tbody>${list.map((h) => hotRow(h, maxScore)).join('')}</tbody>
+    <tbody>${list.map((g) => groupRow(g, maxScore)).join('')}</tbody>
   </table></div>
-  <p class="small muted">줄을 누르면 최근 블로그 글, 비슷한 제품, 고치기가 펼쳐져요. 7일·3일 블로그는 그 사람과 옷 이름이 함께 들어간 글 수(최대 100), 점수는 블로그 글이 중심이에요.</p>`;
+  <p class="small muted">같은 사람이 같은 자리(키워드)에서 입은 옷은 한 줄로 묶었어요. 옷마다 블로그 수가 줄 맞춰 나오고, 점수는 그중 가장 높은 값이에요. 줄을 누르면 옷별 블로그 글·비슷한 제품·고치기가 펼쳐져요. 7일·3일 블로그는 그 사람과 옷 이름이 함께 들어간 글 수(최대 100)예요.</p>`;
 }
 
-function hotRow(h, maxScore) {
-  const sc = h.score;
-  const open = celebOpen.has(h.id);
-  const cell = (v) => (v == null ? '<span class="muted">–</span>' : num(v));
-  return `<tr class="look-row ${open ? 'open' : ''}" data-row="${esc(h.id)}">
-      <td class="nowrap"><span class="chev" aria-hidden="true">${open ? '▾' : '▸'}</span> <button class="star ${h.favorite ? 'on' : ''}" data-fav="${esc(h.celeb)}" title="${h.favorite ? '관심 연예인에서 빼기' : '관심 연예인으로 추가'}" aria-label="관심 연예인">${h.favorite ? '★' : '☆'}</button>
-        <b>${esc(h.celeb)}</b>${h.hot ? ' <span class="chip hot" title="블로그에서 뜨는 옷">🔥</span>' : ''}${h.written ? ' <span class="chip">작성함</span>' : ''}</td>
-      <td class="nowrap">${h.situation !== '기타' ? `<span class="chip celeb">${esc(h.situation)}</span>` : '<span class="muted">–</span>'}${h.buzz ? ' <span class="chip hot" title="기사에 완판·화제 같은 표현이 있어요">화제</span>' : ''}</td>
-      <td class="nowrap">${h.brand ? `<b>${esc(h.brand)}</b>` : '<span class="muted">미상</span>'}</td>
-      <td><span class="piece-cat">${esc(h.category)}</span> <b>${esc(h.product || h.item)}</b>${h.product && h.product !== h.item ? ` <span class="muted small">${esc(h.item)}</span>` : ''}</td>
-      <td class="num"><b>${cell(sc?.blog7)}</b></td>
-      <td class="num">${cell(sc?.blog3)}</td>
-      <td class="num">${cell(sc?.posts)}</td>
-      <td class="num">${h.articles.length}</td>
-      <td class="nowrap">${sc ? `<span class="bar" style="width:${Math.round((sc.score / maxScore) * 60)}px"></span><span class="score">${sc.score}</span>` : '<span class="muted">–</span>'}</td>
-      <td class="nowrap"><button class="btn primary sm" data-board="${esc(h.id)}">글 만들기</button></td>
-    </tr>${open ? `<tr class="look-detail"><td colspan="10">${hotDetail(h)}</td></tr>` : ''}`;
+function groupRow(g, maxScore) {
+  const open = celebOpen.has(g.id);
+  const lines = (fn) => `<td class="lines">${g.pieces.map((p) => `<div class="pl">${fn(p)}</div>`).join('')}</td>`;
+  const numLine = (v) => (v == null ? '<span class="muted">–</span>' : num(v));
+  return `<tr class="look-row ${open ? 'open' : ''}" data-row="${esc(g.id)}">
+      <td class="nowrap"><span class="chev" aria-hidden="true">${open ? '▾' : '▸'}</span> <button class="star ${g.favorite ? 'on' : ''}" data-fav="${esc(g.celeb)}" title="${g.favorite ? '관심 연예인에서 빼기' : '관심 연예인으로 추가'}" aria-label="관심 연예인">${g.favorite ? '★' : '☆'}</button>
+        <b>${esc(g.celeb)}</b>${g.hot ? ' <span class="chip hot" title="블로그에서 뜨는 옷이 있어요">🔥</span>' : ''}${g.written ? ' <span class="chip">작성함</span>' : ''}
+        ${g.pieces.length > 1 ? `<span class="small muted">옷 ${g.pieces.length}개</span>` : ''}</td>
+      <td class="nowrap">${g.situation !== '기타' ? `<span class="chip celeb">${esc(g.situation)}</span>` : '<span class="muted">–</span>'}${g.buzz ? ' <span class="chip hot" title="기사에 완판·화제 같은 표현이 있어요">화제</span>' : ''}</td>
+      ${lines((p) => (p.brand ? `<b>${esc(p.brand)}</b>` : '<span class="muted">미상</span>'))}
+      ${lines((p) => `<span class="piece-cat">${esc(p.category)}</span> <b>${esc(p.product || p.item)}</b>${p.product && p.product !== p.item ? ` <span class="muted small">${esc(p.item)}</span>` : ''}${p.buzz ? ' <span class="chip hot">화제</span>' : ''}`)}
+      ${lines((p) => `<span class="num-cell"><b>${numLine(p.score?.blog7)}</b></span>`).replace('<td class="lines">', '<td class="lines num">')}
+      ${lines((p) => `<span class="num-cell">${numLine(p.score?.blog3)}</span>`).replace('<td class="lines">', '<td class="lines num">')}
+      ${lines((p) => `<span class="num-cell">${numLine(p.score?.posts)}</span>`).replace('<td class="lines">', '<td class="lines num">')}
+      <td class="num">${g.links.length}</td>
+      <td class="nowrap">${g.m.score != null ? `<span class="bar" style="width:${Math.round((g.m.score / maxScore) * 60)}px"></span><span class="score">${g.m.score}</span>` : '<span class="muted">–</span>'}</td>
+      <td class="nowrap"><button class="btn primary sm" data-board="${esc(g.id)}">글 만들기</button></td>
+    </tr>${open ? `<tr class="look-detail"><td colspan="10">${groupDetail(g)}</td></tr>` : ''}`;
 }
 
 function blogList(h) {
@@ -126,13 +148,13 @@ function blogList(h) {
       : '<p class="small" style="margin:4px 0">아직 이 옷으로 쓴 글이 거의 없어요. 먼저 쓰면 상위에 오를 기회예요.</p>'}</div>`;
 }
 
-function hotDetail(h) {
+function pieceDetail(h) {
   const q = [h.brand, h.product || h.item].filter(Boolean).join(' ');
-  return `<div class="row" style="margin:6px 0"><span class="small muted">블로그 글 키워드</span><b>${esc(h.name)}</b>
+  return `<div class="hot-piece">
+    <div class="row" style="margin:6px 0"><b>${esc(h.category)} · ${esc(h.product || h.item)}</b><span class="small muted">블로그 글 키워드</span><b>${esc(h.name)}</b>
       <button class="btn ghost sm" data-copy="${esc(h.name)}">복사</button></div>
     <div class="row small" style="margin-bottom:4px">
       ${h.color ? `<span>색상 ${esc(h.color)}</span>` : ''}${h.price ? `<span>가격 ${esc(h.price)}</span>` : ''}
-      ${h.sameLook.length ? `<span>같이 입은 아이템: ${h.sameLook.map(esc).join(', ')}</span>` : ''}
       <span class="spacer"></span>
       <a class="btn ghost sm" href="https://search.shopping.naver.com/search/all?query=${encodeURIComponent(q)}" target="_blank" rel="noopener noreferrer">쇼핑↗</a>
       <button class="btn ghost sm" data-similar="${esc(h.item)}" data-brand="${esc(h.brand)}">비슷한 제품</button>
@@ -140,8 +162,13 @@ function hotDetail(h) {
     </div>
     <div class="similar" hidden></div>
     ${blogList(h)}
-    <div class="row small">출처 기사: ${h.articles.slice(0, 4).map((a, i) => `<a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(a.title)}">기사${h.articles.length > 1 ? ` ${i + 1}` : ''}&nbsp;↗</a>`).join(' ')}
-      ${h.articles.length > 4 ? `<span class="muted">외 ${h.articles.length - 4}건</span>` : ''}</div>`;
+  </div>`;
+}
+
+function groupDetail(g) {
+  return `${g.pieces.map(pieceDetail).join('')}
+    <div class="row small">출처 기사: ${g.links.slice(0, 5).map((a, i) => `<a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(a.title)}">기사${g.links.length > 1 ? ` ${i + 1}` : ''}&nbsp;↗</a>`).join(' ')}
+      ${g.links.length > 5 ? `<span class="muted">외 ${g.links.length - 5}건</span>` : ''}</div>`;
 }
 
 function bindCeleb() {
@@ -183,7 +210,7 @@ async function toggleFavorite(name) {
 }
 
 async function showSimilar(btn) {
-  const box = btn.closest('td').querySelector('.similar');
+  const box = btn.closest('.hot-piece').querySelector('.similar');
   if (!box.hidden) { box.hidden = true; return; }
   box.hidden = false;
   box.innerHTML = '<span class="small muted">찾는 중…</span>';
@@ -223,14 +250,17 @@ async function editHot(id) {
   views.celeb();
 }
 
-async function hotToBoard(hotId) {
-  const h = celebData.hots.find((x) => x.id === hotId);
-  const r = await dialog('이 옷으로 글 만들기', [
-    { name: 'title', label: '글 제목', value: `${h.situation !== '기타' ? h.situation + ' ' : ''}${h.celeb} ${h.brand ? h.brand + ' ' : ''}${h.item} 정보와 비슷한 제품`, required: true },
+async function hotToBoard(groupId) {
+  const g = celebGroupMap.get(groupId);
+  if (!g) return;
+  const items = g.pieces.slice(0, 3).map((p) => p.item).join('·');
+  const brand = g.pieces.find((p) => p.brand)?.brand;
+  const r = await dialog('이 착장으로 글 만들기', [
+    { name: 'title', label: '글 제목', value: `${g.situation !== '기타' ? g.situation + ' ' : ''}${g.celeb} ${brand ? brand + ' ' : ''}${items} 정보와 비슷한 제품`, required: true },
     { name: 'plannedDate', label: '발행 예정일 (선택)', type: 'date', value: kstDate(1) },
   ], { submit: '보드 만들기' });
   if (!r) return;
-  const board = await api('/api/celeb/board', { method: 'POST', body: { hotId, ...r } });
-  toast('상품 보드를 만들었어요. 옷과 같이 입은 아이템, 출처 기사가 담겨 있어요.');
+  const board = await api('/api/celeb/board', { method: 'POST', body: { hotIds: g.pieces.map((p) => p.id), ...r } });
+  toast(`상품 보드를 만들었어요. 옷 ${g.pieces.length}개와 출처 기사가 담겨 있어요.`);
   location.hash = `#/boards/${board.id}`;
 }
