@@ -56,6 +56,12 @@ views.settings = async () => {
       </section>
 
       <section class="card grid">
+        <h2>명품 브랜드 추가</h2>
+        <p class="small muted" style="margin:0">명품 메뉴에는 기본으로 40개 브랜드가 있어요. 목록에 없는 브랜드를 한 줄에 하나씩 넣으면 함께 비교해요(최대 20개).</p>
+        <textarea name="luxuryExtra" rows="3" placeholder="예: 토즈">${esc((s.luxuryExtra || []).join('\n'))}</textarea>
+      </section>
+
+      <section class="card grid">
         <h2>관심 브랜드</h2>
         <p class="small muted" style="margin:0">한 줄에 하나씩. 블로그 검색으로 하루 한 번 '브랜드 + 세일/신상' 최근 글을 모아요(최대 20개). 예: 탑텐, 무신사 스탠다드, 자라</p>
         <textarea name="brands" rows="4" placeholder="탑텐&#10;무신사 스탠다드&#10;자라">${esc(s.brands.join('\n'))}</textarea>
@@ -128,6 +134,7 @@ views.settings = async () => {
     body.autoKeywords = f.get('autoKeywords') === 'on';
     body.titleCategories = f.getAll('titleCategories');
     body.celebs = body.celebs.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
+    body.luxuryExtra = body.luxuryExtra.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     body.brands = body.brands.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     try {
       await api('/api/settings', { method: 'PUT', body });

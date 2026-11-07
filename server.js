@@ -17,6 +17,7 @@ const brandnews = require('./lib/brandnews');
 const scheduler = require('./lib/scheduler');
 const report = require('./lib/report');
 const photos = require('./lib/photos');
+const luxury = require('./lib/luxury');
 const celeb = require('./lib/celeb');
 const { picksFor } = require('./lib/picks');
 
@@ -60,6 +61,7 @@ function publicSettings() {
     githubToken: s.githubToken ? MASK : '',
     anthropicApiKey: s.anthropicApiKey ? MASK : '',
     celebs: s.celebs || [],
+    luxuryExtra: s.luxuryExtra || [],
     hasNaver: service.hasNaver(s),
     hasKma: Boolean(s.kmaServiceKey),
     regions: Object.keys(REGIONS),
@@ -89,6 +91,7 @@ function updateSettings(body) {
   }
   if (typeof body.autoKeywords === 'boolean') s.autoKeywords = body.autoKeywords;
   if (Array.isArray(body.celebs)) s.celebs = cleanList(body.celebs, 30);
+  if (Array.isArray(body.luxuryExtra)) s.luxuryExtra = cleanList(body.luxuryExtra, 20);
   if (Array.isArray(body.titleCategories)) s.titleCategories = cleanList(body.titleCategories, 50);
   if (Array.isArray(body.excludedKeywords)) s.excludedKeywords = cleanList(body.excludedKeywords, 200);
   if (Array.isArray(body.brands)) {
@@ -226,6 +229,8 @@ const routes = [
   ['GET', /^\/api\/active-keywords$/, () => service.activeKeywords()],
   ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
+  ['GET', /^\/api\/luxury$/, (m, b, q) => luxury.list({ force: q.get('refresh') === '1' })],
+  ['GET', /^\/api\/luxury\/([^/]+)$/, (m, b, q) => luxury.detail(decodeURIComponent(m[1]), { force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/celeb$/, () => celeb.view()],
   ['POST', /^\/api\/celeb\/refresh$/, async () => {
     if (celeb.view().needs.naver) throw httpError(400, '네이버 API 키가 필요해요.');
