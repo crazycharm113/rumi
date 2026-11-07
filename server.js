@@ -18,6 +18,7 @@ const scheduler = require('./lib/scheduler');
 const report = require('./lib/report');
 const photos = require('./lib/photos');
 const celeb = require('./lib/celeb');
+const { picksFor } = require('./lib/picks');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -229,6 +230,25 @@ const routes = [
     store.load().jobs.celeb = new Date().toISOString();
     store.save();
     return celeb.view();
+  }],
+  ['PUT', /^\/api\/celeb\/items\/(\w+)$/, (m, body) => celeb.editItem(m[1], body)],
+  ['POST', /^\/api\/celeb\/board$/, (m, body) => celeb.boardFromLook(String(body.lookId || ''), body)],
+  ['GET', /^\/api\/celeb\/similar$/, async (m, b, q) => {
+    // 셀럽이 입은 아이템과 같은 종류의 다른 브랜드 제품 (블로그 언급 기준) + 가격대별 쇼핑 검색
+    const item = String(q.get('item') || '').slice(0, 40);
+    const brand = String(q.get('brand') || '');
+    if (!item) throw httpError(400, '아이템이 필요해요.');
+    const picks = await picksFor(item).catch(() => ({ items: [], reviews: [] }));
+    const shop = (query, sort) => `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(query)}${sort ? `&sort=${sort}` : ''}`;
+    return {
+      item,
+      alternatives: (picks.items || []).filter((x) => !brand || x.brand !== brand).slice(0, 3),
+      links: [
+        { label: '낮은 가격순', url: shop(item, 'price_asc') },
+        { label: '가성비 검색', url: shop(`${item} 가성비`) },
+        ...(brand ? [{ label: `${brand} 정품 검색`, url: shop(`${brand} ${item}`) }] : []),
+      ],
+    };
   }],
   ['GET', /^\/api\/photos$/, () => photos.list()],
   ['POST', /^\/api\/photos$/, (m, body) => photos.add(body)],

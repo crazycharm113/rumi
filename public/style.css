@@ -326,3 +326,23 @@ dialog.dlg h2 { margin: 0; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip.celeb { background: #2e2240; color: #d8b4fe; } }
 .outfit { display: flex; flex-direction: column; gap: 4px; }
 .outfit-item { font-size: 18px; font-weight: 700; }
+/* 셀럽 착장 */
+.filters { display: grid; gap: 8px; }
+.filter-label { width: 34px; flex: none; }
+.look { display: flex; flex-direction: column; gap: 8px; }
+.look-name { font-size: 17px; }
+.star { border: 0; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink-3); padding: 0 2px; }
+.star.on { color: #e0a100; }
+.chip.hot { background: #ffe8d6; color: #b4532a; font-weight: 700; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip.hot { background: #3d2a1c; color: #f0a27a; } }
+.pieces { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.looks-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); }
+/* 아이템 줄: 왼쪽 종류, 가운데 이름·브랜드, 버튼은 그 아래 줄에 모아 겹치지 않게 */
+.pieces > li { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 8px; row-gap: 4px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
+.pieces > li:first-child { border-top: 0; }
+.piece-cat { font-size: 12px; color: var(--ink-3); }
+.piece-main { display: grid; }
+.piece-cat { padding-top: 3px; }
+.piece-actions { grid-column: 2; display: flex; gap: 2px; flex-wrap: wrap; margin-left: -8px; }
+.pieces .similar { grid-column: 1 / -1; background: var(--surface-2); border-radius: 10px; padding: 8px 10px; }
+@media (max-width: 640px) { .pieces > li { grid-template-columns: 44px 1fr; } }
