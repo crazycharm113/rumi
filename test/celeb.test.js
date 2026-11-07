@@ -185,3 +185,29 @@ test('이번 주 많이 입은 아이템과 오늘의 주제 반영', () => {
   assert.ok(topics[0].reasons.some((r) => r.text === '셀럽 착용 2명 (문가영, B)'));
   assert.strictEqual(topics[0].celebTitle, '문가영이 입은 트렌치코트, 비슷한 제품 찾아봤어요');
 });
+
+test('기사가 많으면 50건씩 나눠 Claude에 보내고, 각 묶음의 번호가 맞게 연결됨', async () => {
+  const db = store.load();
+  db.celeb = { items: [], seen: {}, lastRun: '', error: '', edits: {}, scores: {} };
+  const now = new Date().toUTCString();
+  let n = 0;
+  naver.searchNews = async (s, q, display) => {
+    assert.strictEqual(display, 100);
+    return q === '공항패션' ? Array.from({ length: 120 }, (_, i) => ({ title: `연예인${i} 공항패션 착용 기사 번호 ${i}`, description: '', link: `https://news/${i}`, pubDate: now })) : [];
+  };
+  const before = sent.length;
+  reply = (body) => {
+    const text = body.messages[0].content;
+    const nums = [...text.matchAll(/\[(\d+)\] 연예인(\d+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+    n += nums.length;
+    return ok({ outfits: nums.map(([idx, who]) => ({ article: idx, celeb: `연예인${who}`, situation: '공항패션', item: '코트', category: '아우터', brand: '', product: '', color: '', price: '', buzz: false })) })();
+  };
+  naver.trend = async () => ({});
+  naver.blogStats = async () => ({ total: 0, topDates: [], items: [] });
+  await celeb.refresh();
+  assert.strictEqual(sent.length - before, 3); // 120건 → 50 + 50 + 20
+  assert.strictEqual(n, 120);
+  const st = celeb.state();
+  assert.strictEqual(new Set(st.items.map((x) => x.celeb)).size, 120);
+  assert.strictEqual(st.items.find((x) => x.celeb === '연예인77').link, 'https://news/77'); // 두 번째 묶음에서도 번호가 맞음
+});

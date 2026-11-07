@@ -10,10 +10,10 @@ views.celeb = async () => {
   renderCeleb();
 };
 
-function filteredHots(d) {
+function filteredHots(d, skipPerson = false) {
   const since = kstDate(-(celebUI.days - 1));
   let list = d.hots.filter((h) => h.date >= since);
-  if (celebUI.person) list = list.filter((h) => h.celeb === celebUI.person);
+  if (celebUI.person && !skipPerson) list = list.filter((h) => h.celeb === celebUI.person);
   if (celebUI.favOnly) list = list.filter((h) => h.favorite);
   if (celebUI.hideWritten) list = list.filter((h) => !h.written);
   if (celebUI.cat) list = list.filter((h) => h.category === celebUI.cat);
@@ -38,7 +38,8 @@ function filteredHots(d) {
 function renderCeleb() {
   const d = celebData;
   const missing = [d.needs.claude && 'Claude API 키', d.needs.naver && '네이버 API 키(검색 - 뉴스 포함)'].filter(Boolean).join('와 ');
-  const people = [...new Set(d.hots.map((h) => h.celeb))].sort((a, b) => a.localeCompare(b, 'ko'));
+  // 사람 목록은 지금 걸어 둔 필터(기간·키워드 등)에서 보이는 사람만 (사람 선택은 빼고 셉니다)
+  const people = [...new Set(filteredHots(d, true).list.map((h) => h.celeb))].sort((a, b) => a.localeCompare(b, 'ko'));
   const { list, quiet } = filteredHots(d);
   const chipBtn = (key, value, label) => `<button class="chip-btn ${celebUI[key] === value ? 'on' : ''}" data-set="${key}" data-val="${esc(String(value))}">${esc(label)}</button>`;
   const sitCount = (s) => d.hots.filter((h) => h.situation === s).length;
