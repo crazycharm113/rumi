@@ -22,6 +22,29 @@ if (process.argv.includes('--hidden')) {
 }
 
 const { main: update } = require('./updater');
+const crypto = require('crypto');
+const { spawnSync } = require('child_process');
+
+// 필요한 라이브러리(package.json 의 dependencies)가 바뀌었거나 없으면 npm 으로 한 번 설치합니다.
+// 설치에 실패해도 프로그램은 켜지고, 그 라이브러리를 쓰는 기능(셀럽 착장)만 안내 문구를 보여줍니다.
+function ensureDependencies() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+  const want = crypto.createHash('sha1').update(JSON.stringify(pkg.dependencies || {})).digest('hex');
+  const marker = path.join(__dirname, 'node_modules', '.deps-hash');
+  let have = '';
+  try { have = fs.readFileSync(marker, 'utf8').trim(); } catch { /* 처음 */ }
+  if (have === want) return;
+  console.log('필요한 라이브러리를 설치하는 중이에요(처음 한 번, 1분 정도)…');
+  const r = spawnSync('npm', ['install', '--omit=dev', '--no-audit', '--no-fund'], {
+    cwd: __dirname, shell: process.platform === 'win32', windowsHide: true, encoding: 'utf8', timeout: 5 * 60e3,
+  });
+  if (r.status === 0) {
+    fs.writeFileSync(marker, want);
+    console.log('라이브러리 설치 완료');
+  } else {
+    console.log(`라이브러리 설치 실패: ${(r.stderr || r.error?.message || '').slice(-500)}`);
+  }
+}
 
 function openBrowser(url) {
   const cmd = process.platform === 'win32' ? `start "" "${url}"` : process.platform === 'darwin' ? `open "${url}"` : `xdg-open "${url}"`;
@@ -40,4 +63,5 @@ async function stopRunning() {
 
 stopRunning()
   .then(update)
+  .then(ensureDependencies, ensureDependencies)
   .finally(() => require('./server').start(process.argv.includes('--open') ? openBrowser : null));

@@ -322,3 +322,7 @@ dialog.dlg h2 { margin: 0; }
 .photo-list li { display: grid; grid-template-columns: 56px 1fr 90px auto; gap: 10px; align-items: center; }
 .photo-list img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
 @media (max-width: 640px) { .photo-list li { grid-template-columns: 48px 1fr; } .photo-list img { width: 48px; height: 48px; } }
+.chip.celeb { background: #f3e8ff; color: #6b21a8; font-weight: 600; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip.celeb { background: #2e2240; color: #d8b4fe; } }
+.outfit { display: flex; flex-direction: column; gap: 4px; }
+.outfit-item { font-size: 18px; font-weight: 700; }

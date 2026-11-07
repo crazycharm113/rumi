@@ -17,6 +17,7 @@ const brandnews = require('./lib/brandnews');
 const scheduler = require('./lib/scheduler');
 const report = require('./lib/report');
 const photos = require('./lib/photos');
+const celeb = require('./lib/celeb');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -56,6 +57,8 @@ function publicSettings() {
     naverClientSecret: s.naverClientSecret ? MASK : '',
     kmaServiceKey: s.kmaServiceKey ? MASK : '',
     githubToken: s.githubToken ? MASK : '',
+    anthropicApiKey: s.anthropicApiKey ? MASK : '',
+    celebs: s.celebs || [],
     hasNaver: service.hasNaver(s),
     hasKma: Boolean(s.kmaServiceKey),
     regions: Object.keys(REGIONS),
@@ -84,6 +87,7 @@ function updateSettings(body) {
     s.keywords = cleanList(body.keywords, 60);
   }
   if (typeof body.autoKeywords === 'boolean') s.autoKeywords = body.autoKeywords;
+  if (Array.isArray(body.celebs)) s.celebs = cleanList(body.celebs, 30);
   if (Array.isArray(body.titleCategories)) s.titleCategories = cleanList(body.titleCategories, 50);
   if (Array.isArray(body.excludedKeywords)) s.excludedKeywords = cleanList(body.excludedKeywords, 200);
   if (Array.isArray(body.brands)) {
@@ -96,7 +100,7 @@ function updateSettings(body) {
     if (id !== s.blogId) delete db.jobs.rss;
     s.blogId = id;
   }
-  for (const key of ['naverClientId', 'naverClientSecret', 'kmaServiceKey', 'githubToken']) {
+  for (const key of ['naverClientId', 'naverClientSecret', 'kmaServiceKey', 'githubToken', 'anthropicApiKey']) {
     if (typeof body[key] === 'string' && body[key] !== MASK) s[key] = body[key].trim();
   }
   store.save();
@@ -218,6 +222,14 @@ const routes = [
   ['GET', /^\/api\/active-keywords$/, () => service.activeKeywords()],
   ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
   ['GET', /^\/api\/blogger-items$/, (m, b, q) => service.getBloggerItems({ force: q.get('refresh') === '1' })],
+  ['GET', /^\/api\/celeb$/, () => celeb.view()],
+  ['POST', /^\/api\/celeb\/refresh$/, async () => {
+    if (celeb.view().needs.naver) throw httpError(400, '네이버 API 키가 필요해요.');
+    await celeb.refresh();
+    store.load().jobs.celeb = new Date().toISOString();
+    store.save();
+    return celeb.view();
+  }],
   ['GET', /^\/api\/photos$/, () => photos.list()],
   ['POST', /^\/api\/photos$/, (m, body) => photos.add(body)],
   ['PUT', /^\/api\/photos\/([\w.]+)$/, (m, body) => photos.update(m[1], body)],

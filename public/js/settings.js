@@ -42,6 +42,20 @@ views.settings = async () => {
       </section>
 
       <section class="card grid">
+        <h2>Claude (셀럽 착장) ${s.anthropicApiKey ? '<span class="chip up">연결됨</span>' : '<span class="chip warn">미설정</span>'}</h2>
+        <div class="small muted" style="margin:0">
+          <p style="margin:0 0 6px">셀럽 착장 기능은 연예인 패션 기사에서 Claude가 착장 정보를 뽑아요. claude.ai 구독과 별도로 <b>Anthropic API 키</b>가 필요하고, 쓴 만큼 요금이 나가요(하루 한 번 모을 때 대략 하루 100원 안팎).</p>
+          <ol style="margin:0;padding-left:18px">
+            <li>console.anthropic.com 에 가입 → 결제 수단 등록 후 크레딧 충전</li>
+            <li>API Keys 에서 키를 만들어 아래에 붙여넣기</li>
+            <li>네이버 API HUB 애플리케이션에 <b>검색 - 뉴스</b>도 추가</li>
+          </ol>
+        </div>
+        <label class="field">Anthropic API 키<input name="anthropicApiKey" type="password" value="${esc(s.anthropicApiKey)}" autocomplete="off" placeholder="sk-ant-..."></label>
+        <label class="field">관심 연예인 (한 줄에 하나, 선택 — 이 사람 기사를 더 모아요)<textarea name="celebs" rows="3" placeholder="예: 문가영">${esc(s.celebs.join('\n'))}</textarea></label>
+      </section>
+
+      <section class="card grid">
         <h2>관심 브랜드</h2>
         <p class="small muted" style="margin:0">한 줄에 하나씩. 블로그 검색으로 하루 한 번 '브랜드 + 세일/신상' 최근 글을 모아요(최대 20개). 예: 탑텐, 무신사 스탠다드, 자라</p>
         <textarea name="brands" rows="4" placeholder="탑텐&#10;무신사 스탠다드&#10;자라">${esc(s.brands.join('\n'))}</textarea>
@@ -113,6 +127,7 @@ views.settings = async () => {
     body.excludedKeywords = body.excludedKeywords.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     body.autoKeywords = f.get('autoKeywords') === 'on';
     body.titleCategories = f.getAll('titleCategories');
+    body.celebs = body.celebs.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     body.brands = body.brands.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     try {
       await api('/api/settings', { method: 'PUT', body });
