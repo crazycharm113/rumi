@@ -19,6 +19,7 @@ views.home = async () => {
       </div>
       <p class="small muted" id="topicsNote" style="margin:-4px 0 10px">${topicsNote(b.ageLabel, b.topics)}</p>
       <div class="grid grid-3" id="topicsGrid">${topicsGrid(b.topics)}</div>
+      <div class="row" style="margin-top:12px;justify-content:center"><a class="btn" href="#/explore">다른 키워드 주제 더 보기 →</a></div>
     </section>
 
     <div class="grid grid-2 section">

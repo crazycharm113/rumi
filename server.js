@@ -219,6 +219,9 @@ const routes = [
     const r = await service.getKeywordRows({ force: q.get('refresh') === '1' });
     return { ...r, ageLabel: AGE_GROUPS[r.age].label };
   }],
+  ['GET', /^\/api\/topics\/more$/, (m, b, q) => service.getMoreTopics({
+    age: q.get('age') || 'all', offset: q.get('offset'), limit: q.get('limit'), cat: q.get('cat') || '', q: q.get('q') || '',
+  })],
   ['GET', /^\/api\/topics$/, (m, b, q) => service.getTopics(q.get('age') || 'all')],
   ['GET', /^\/api\/active-keywords$/, () => service.activeKeywords()],
   ['GET', /^\/api\/discover$/, (m, b, q) => service.getDiscover({ force: q.get('refresh') === '1' })],
