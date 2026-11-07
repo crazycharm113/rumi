@@ -1,6 +1,7 @@
 // 셀럽 착장: 연예인·유명인 패션 기사에서 Claude가 뽑은 착장을 사람·날짜별 '착장'으로 묶어 보여줍니다.
 // 지금 쓰기 좋은 순으로 정렬하고, 비슷한 제품 찾기와 '이 착장으로 글 만들기'로 바로 글감이 되게 합니다.
-const celebUI = { days: 7, cat: '', brandOnly: false, sort: 'score', person: '', favOnly: false, hideWritten: false };
+const celebUI = { days: 7, cat: '', brandOnly: false, sort: 'score', dir: -1, person: '', favOnly: false, hideWritten: false };
+const celebOpen = new Set(); // 펼쳐 둔 착장
 let celebData = null;
 
 views.celeb = async () => {
@@ -20,9 +21,16 @@ function filteredLooks(d) {
     ...l,
     shown: l.pieces.filter((p) => (!celebUI.cat || p.category === celebUI.cat) && (!celebUI.brandOnly || p.brand)),
   })).filter((l) => l.shown.length);
-  return looks.sort((a, b) => (celebUI.sort === 'score'
-    ? (b.score?.score ?? -1) - (a.score?.score ?? -1) || b.date.localeCompare(a.date)
-    : b.date.localeCompare(a.date) || (b.score?.score ?? -1) - (a.score?.score ?? -1)));
+  const val = (l) => ({
+    celeb: l.celeb, date: l.date, articles: l.articles.length, score: l.score?.score ?? null,
+    celebChange: l.score?.celebChange ?? null, posts: l.score?.posts ?? null, freshAge: l.score?.fresh?.medianAge ?? null,
+  }[celebUI.sort]);
+  return looks.sort((a, b) => {
+    const x = val(a), y = val(b);
+    if (x == null) return 1;
+    if (y == null) return -1;
+    return (typeof x === 'string' ? x.localeCompare(y, 'ko') : x - y) * celebUI.dir || b.date.localeCompare(a.date);
+  });
 }
 
 function renderCeleb() {
@@ -58,38 +66,50 @@ function renderCeleb() {
         <label class="row small"><input type="checkbox" data-check="favOnly" ${celebUI.favOnly ? 'checked' : ''} style="width:auto"> ★ 관심 연예인만</label>
         <label class="row small"><input type="checkbox" data-check="brandOnly" ${celebUI.brandOnly ? 'checked' : ''} style="width:auto"> 브랜드 확인된 것만</label>
         <label class="row small"><input type="checkbox" data-check="hideWritten" ${celebUI.hideWritten ? 'checked' : ''} style="width:auto"> 이미 쓴 착장 빼기</label>
-        <span class="spacer"></span>
-        <select id="celebSort" style="width:auto"><option value="score" ${celebUI.sort === 'score' ? 'selected' : ''}>지금 쓰기 좋은 순</option><option value="date" ${celebUI.sort === 'date' ? 'selected' : ''}>최신순</option></select>
       </div>
     </section>
 
-    <div class="looks-grid section">
-      ${looks.map(lookCard).join('') || '<div class="card empty">조건에 맞는 착장이 없어요.</div>'}
-    </div>
+    ${looks.length ? lookTable(looks) : '<div class="card empty section">조건에 맞는 착장이 없어요.</div>'}
     <p class="small muted section">기사 제목·요약만 저장하고 본문과 사진은 저장하지 않아요. 블로그에 기사 문장이나 보도 사진을 그대로 옮기면 저작권 문제가 생길 수 있으니, 출처를 밝히고 직접 쓴 문장과 직접 찍은·허락받은 사진을 써 주세요.</p>`;
   bindCeleb();
 }
 
-function scoreChips(sc) {
-  if (!sc) return '';
-  const parts = [`기사 ${sc.articles}건`];
-  if (sc.celebChange != null && sc.celebChange !== 0) parts.push(`이름 검색 ${signed(sc.celebChange)}%`);
-  if (sc.posts != null) parts.push(`같은 글 ${num(sc.posts)}개`);
-  if (sc.fresh?.oldShare >= 60) parts.push('상위 글 오래됨');
-  return `<div class="small muted">${parts.map(esc).join(' · ')}</div>`;
+function lookTable(looks) {
+  const maxScore = Math.max(...looks.map((l) => l.score?.score || 0), 1);
+  const head = (key, label, cls = '') => `<th class="${cls}" aria-sort="${celebUI.sort === key ? (celebUI.dir > 0 ? 'ascending' : 'descending') : 'none'}">
+    <button data-sortcol="${key}">${label}${celebUI.sort === key ? (celebUI.dir > 0 ? ' ↑' : ' ↓') : ''}</button></th>`;
+  return `<div class="table-wrap section"><table class="look-table">
+    <thead><tr>
+      ${head('celeb', '사람')}${head('date', '날짜')}<th>착장</th>
+      ${head('articles', '기사', 'num')}${head('celebChange', '이름 검색', 'num')}${head('posts', '같은 글 수', 'num')}${head('freshAge', '상위 글', 'num')}
+      ${head('score', '쓰기 좋은 점수')}<th></th>
+    </tr></thead>
+    <tbody>${looks.map((l) => lookRow(l, maxScore)).join('')}</tbody>
+  </table></div>
+  <p class="small muted">줄을 누르면 아이템별 쇼핑·비슷한 제품·고치기가 펼쳐져요. 🔥는 점수 상위 20%, 상위 글의 %는 6개월 넘은 글 비율이에요.</p>`;
 }
 
-function lookCard(l) {
-  return `<article class="card look" data-look="${esc(l.id)}">
-    <div class="row">
-      <button class="star ${l.favorite ? 'on' : ''}" data-fav="${esc(l.celeb)}" title="${l.favorite ? '관심 연예인에서 빼기' : '관심 연예인으로 추가'}" aria-label="관심 연예인">${l.favorite ? '★' : '☆'}</button>
-      <b class="look-name">${esc(l.celeb)}</b>
-      ${l.hot ? '<span class="chip hot">🔥 지금 쓰기 좋음</span>' : ''}
-      ${l.written ? '<span class="chip">작성함</span>' : ''}
-      <span class="spacer"></span><span class="small muted">${esc(mmdd(l.date))}</span>
-    </div>
-    ${scoreChips(l.score)}
-    <ul class="pieces">${l.shown.map((p) => `<li data-piece="${esc(p.id)}">
+function lookRow(l, maxScore) {
+  const sc = l.score;
+  const open = celebOpen.has(l.id);
+  const change = sc?.celebChange;
+  const fresh = sc?.fresh;
+  return `<tr class="look-row ${open ? 'open' : ''}" data-row="${esc(l.id)}">
+      <td class="nowrap"><span class="chev" aria-hidden="true">${open ? '▾' : '▸'}</span> <button class="star ${l.favorite ? 'on' : ''}" data-fav="${esc(l.celeb)}" title="${l.favorite ? '관심 연예인에서 빼기' : '관심 연예인으로 추가'}" aria-label="관심 연예인">${l.favorite ? '★' : '☆'}</button>
+        <b>${esc(l.celeb)}</b>${l.hot ? ' <span class="chip hot" title="점수 상위 20%">🔥</span>' : ''}${l.written ? ' <span class="chip">작성함</span>' : ''}</td>
+      <td class="nowrap muted">${esc(mmdd(l.date))}</td>
+      <td class="look-pieces">${l.shown.map((p) => `<div><span class="piece-cat">${esc(p.category)}</span> <b>${esc(p.item)}</b>${p.brand ? ` <span class="muted">${esc(p.brand)}</span>` : ''}</div>`).join('')}</td>
+      <td class="num">${l.articles.length}</td>
+      <td class="num">${change == null ? '<span class="muted">–</span>' : `<span class="pct ${change > 0 ? 'up' : change < 0 ? 'down' : ''}">${signed(change)}%</span>`}</td>
+      <td class="num">${sc?.posts == null ? '<span class="muted">–</span>' : num(sc.posts)}</td>
+      <td class="num nowrap">${fresh ? `${fresh.medianAge}일 <span class="small ${fresh.oldShare >= 60 ? 'tag-new' : 'muted'}" title="상위 글 작성일 중간값 · 6개월 넘은 글 비율">${fresh.oldShare}%</span>` : '<span class="muted">–</span>'}</td>
+      <td class="nowrap">${sc ? `<span class="bar" style="width:${Math.round((sc.score / maxScore) * 60)}px"></span><span class="score">${sc.score}</span>` : '<span class="muted">–</span>'}</td>
+      <td class="nowrap"><button class="btn primary sm" data-board="${esc(l.id)}">글 만들기</button></td>
+    </tr>${open ? `<tr class="look-detail"><td colspan="9">${lookDetail(l)}</td></tr>` : ''}`;
+}
+
+function lookDetail(l) {
+  return `<ul class="pieces">${l.pieces.map((p) => `<li data-piece="${esc(p.id)}">
       <span class="piece-cat">${esc(p.category)}</span>
       <span class="piece-main"><b>${esc(p.item)}</b>${p.color ? ` <span class="muted small">(${esc(p.color)})</span>` : ''}
         <span class="small">${p.brand ? esc(p.brand) : '<span class="muted">브랜드 미상</span>'}${p.product ? ` · ${esc(p.product)}` : ''}${p.price ? ` · ${esc(p.price)}` : ''}</span></span>
@@ -100,12 +120,8 @@ function lookCard(l) {
       </span>
       <div class="similar" hidden></div>
     </li>`).join('')}</ul>
-    <div class="row small">${l.articles.slice(0, 3).map((a, i) => `<a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(a.title)}">기사${l.articles.length > 1 ? ` ${i + 1}` : ''}&nbsp;↗</a>`).join('')}
-      ${l.articles.length > 3 ? `<span class="muted">외 ${l.articles.length - 3}건</span>` : ''}
-      <span class="spacer"></span>
-      <button class="btn primary sm" data-board="${esc(l.id)}">이 착장으로 글 만들기</button>
-    </div>
-  </article>`;
+    <div class="row small">출처 기사: ${l.articles.slice(0, 4).map((a, i) => `<a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(a.title)}">기사${l.articles.length > 1 ? ` ${i + 1}` : ''}&nbsp;↗</a>`).join(' ')}
+      ${l.articles.length > 4 ? `<span class="muted">외 ${l.articles.length - 4}건</span>` : ''}</div>`;
 }
 
 function bindCeleb() {
@@ -116,12 +132,20 @@ function bindCeleb() {
   }));
   $app.querySelectorAll('[data-check]').forEach((c) => c.addEventListener('change', () => { celebUI[c.dataset.check] = c.checked; renderCeleb(); }));
   document.getElementById('celebPerson').addEventListener('change', (e) => { celebUI.person = e.target.value; renderCeleb(); });
-  document.getElementById('celebSort').addEventListener('change', (e) => { celebUI.sort = e.target.value; renderCeleb(); });
 
-  $app.querySelectorAll('[data-fav]').forEach((b) => b.addEventListener('click', () => toggleFavorite(b.dataset.fav)));
+  $app.querySelectorAll('[data-sortcol]').forEach((b) => b.addEventListener('click', () => {
+    const k = b.dataset.sortcol;
+    celebUI.dir = celebUI.sort === k ? -celebUI.dir : (k === 'celeb' || k === 'posts' || k === 'freshAge' ? 1 : -1);
+    celebUI.sort = k;
+    renderCeleb();
+  }));
+  const toggle = (id) => { celebOpen.has(id) ? celebOpen.delete(id) : celebOpen.add(id); renderCeleb(); };
+  $app.querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); toggle(b.dataset.toggle); }));
+  $app.querySelectorAll('tr.look-row').forEach((tr) => tr.addEventListener('click', (e) => { if (!e.target.closest('button, a')) toggle(tr.dataset.row); }));
+  $app.querySelectorAll('[data-fav]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); toggleFavorite(b.dataset.fav); }));
   $app.querySelectorAll('[data-similar]').forEach((b) => b.addEventListener('click', () => showSimilar(b)));
   $app.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => editPiece(b.dataset.edit)));
-  $app.querySelectorAll('[data-board]').forEach((b) => b.addEventListener('click', () => lookToBoard(b.dataset.board)));
+  $app.querySelectorAll('[data-board]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); lookToBoard(b.dataset.board); }));
   document.getElementById('celebRefresh')?.addEventListener('click', async (e) => {
     e.target.disabled = true; e.target.textContent = '모으는 중… (1~2분)';
     try { await api('/api/celeb/refresh', { method: 'POST' }); toast('새 기사를 정리했어요'); } catch (err) { toast(err.message); }
