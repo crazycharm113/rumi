@@ -488,7 +488,10 @@ function serveStatic(req, res, pathname) {
         res.end(e2 ? 'not found' : html);
       });
     }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    // 바뀐 게 없으면 파일을 다시 보내지 않고 304로 답합니다(화면을 열 때마다 스크립트 11개를 다시 받지 않게).
+    const etag = `"${require('crypto').createHash('sha1').update(buf).digest('base64url').slice(0, 20)}"`;
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); return res.end(); }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache', ETag: etag });
     res.end(buf);
   });
 }
