@@ -51,7 +51,7 @@ test('Claude 요청: Opus 5.5, 거절 시 기본 대체, JSON 스키마, 사용�
   await assert.rejects(claude.askJson({ system: 'S', prompt: 'P', schema: celeb.SCHEMA }), /키가 올바르지 않아요/);
 });
 
-test('셀럽 착장 수집: 최근 기사만, 같은 기사 묶기, 본 기사는 다시 안 보냄', async () => {
+test('화제가 된 옷: 같은 사람·같은 옷은 합치고, 점수는 최근 블로그 글 수 중심', async () => {
   const db = store.load();
   Object.assign(db.settings, { naverClientId: 'x', naverClientSecret: 'y', anthropicApiKey: 'sk-test', celebs: ['문가영'], blogId: 'mylog' });
   const now = new Date().toUTCString();
@@ -60,79 +60,99 @@ test('셀럽 착장 수집: 최근 기사만, 같은 기사 묶기, 본 기사�
   naver.searchNews = async (s, q) => {
     queries.push(q);
     return [
-      { title: '문가영, 버버리 트렌치코트로 완성한 공항패션', description: '배우 문가영이 버버리 트렌치코트와 로퍼를 착용했다', link: 'https://news/a', pubDate: now },
+      { title: '문가영, 버버리 트렌치코트로 완성한 공항패션', description: '배우 문가영이 버버리 켄싱턴 트렌치코트를 입었다. 완판', link: 'https://news/a', pubDate: now },
       { title: '문가영, 버버리 트렌치코트로 완성한 공항패션', description: '같은 보도자료', link: 'https://news/a2', pubDate: now },
+      { title: '문가영 사복패션 트렌치코트 화제', description: '문가영의 트렌치코트 사복패션', link: 'https://news/a3', pubDate: now },
       { title: '오래된 기사', description: '', link: 'https://news/old', pubDate: old },
       { title: '가수 B 니트 착장', description: '가수 B가 니트를 입었다', link: 'https://news/b', pubDate: now },
     ];
   };
   reply = (body) => {
-    assert.ok(body.messages[0].content.includes('[0] 문가영'));
-    assert.ok(!body.messages[0].content.includes('오래된 기사'));
+    const text = body.messages[0].content;
+    assert.ok(text.includes('[0] 문가영') && !text.includes('오래된 기사'));
+    assert.ok(body.system.includes('situation') && body.system.includes('buzz'));
     return ok({ outfits: [
-      { article: 0, celeb: '문가영', item: '트렌치코트', brand: '버버리', product: '', color: '베이지', price: '' },
-      { article: 0, celeb: '문가영', item: '로퍼', brand: '', product: '', color: '', price: '' },
-      { article: 1, celeb: '가수 B', item: '니트', brand: '', product: '', color: '', price: '' },
-      { article: 9, celeb: '없는 기사', item: '코트', brand: '', product: '', color: '', price: '' },
+      { article: 0, celeb: '문가영', situation: '공항패션', item: '트렌치코트', category: '아우터', brand: '버버리', product: '켄싱턴 트렌치', color: '베이지', price: '', buzz: true },
+      { article: 0, celeb: '문가영', situation: '공항패션', item: '로퍼', category: '신발', brand: '', product: '', color: '', price: '', buzz: false },
+      { article: 1, celeb: '문가영', situation: '사복패션', item: '트렌치코트', category: '아우터', brand: '', product: '', color: '', price: '', buzz: false },
+      { article: 2, celeb: '가수 B', situation: '화보', item: '니트', category: '상의', brand: '', product: '', color: '', price: '', buzz: false },
+      { article: 9, celeb: '없는 기사', situation: '기타', item: '코트', category: '아우터', brand: '', product: '', color: '', price: '', buzz: false },
     ] })();
   };
   naver.trend = async (s, names) => Object.fromEntries(names.map((n) => [n, { series: n === '문가영' ? [...Array(7).fill(10), ...Array(7).fill(20)] : Array(14).fill(10), anchorAvg: 10 }]));
-  naver.blogStats = async (s, q) => ({
-    total: q.startsWith('문가영') ? 50 : 50000, topDates: ['20240101', '20240201', '20240301'],
-    items: q.startsWith('문가영') ? [
-      { title: '문가영 트렌치코트 공항패션 정리', description: '', link: 'https://blog.naver.com/other/1', blogger: '다른블로거', postdate: '20240101' },
-      { title: '가을 트렌치코트 추천', description: '아무 상관 없는 글', link: 'https://blog.naver.com/other/2', blogger: 'x', postdate: '20240201' },
-      { title: '트렌치코트 코디', description: '문가영이 입은 버버리', link: 'https://blog.naver.com/mylog/3', blogger: '나', postdate: '20240301' },
-    ] : [],
-  });
+  // 블로그: 문가영 트렌치코트는 최근 글이 많고(최신순), 가수 B 니트는 거의 없음
+  const ymd = (n) => store.kstDate(-n).replace(/-/g, '');
+  naver.blogStats = async (s, q, display, sort) => {
+    if (q.startsWith('문가영')) {
+      const recent = [...Array(6).fill(0).map((_, i) => ({ title: `문가영 트렌치코트 코디 ${i}`, description: '', link: `https://blog.naver.com/o/${i}`, blogger: 'x', postdate: ymd(i % 2 ? 1 : 5) })),
+        { title: '문가영 로퍼', description: '', link: 'https://blog.naver.com/o/9', blogger: 'x', postdate: ymd(1) }, // 아이템이 달라서 제외
+        { title: '문가영 트렌치코트 후기', description: '', link: 'https://blog.naver.com/mylog/7', blogger: '나', postdate: ymd(30) }]; // 오래된 글
+      return { total: 50, topDates: ['20240101', '20240201'], items: sort === 'date' ? recent : recent.filter((p) => p.postdate !== ymd(30)).slice(0, 3).concat(recent.at(-1)) };
+    }
+    return { total: 50000, topDates: [], items: sort === 'date' ? [{ title: '가을 니트 코디 추천', description: '', link: 'https://blog.naver.com/o/b', blogger: 'x', postdate: ymd(2) }] : [] };
+  };
   await celeb.refresh();
-  assert.ok(queries.includes('문가영 패션'));
+  assert.ok(queries.includes('문가영 패션') && queries.includes('공항패션') && queries.includes('사복패션'));
   const v = celeb.view();
   assert.strictEqual(v.demo, false);
-  assert.strictEqual(v.lastNew, 2); // 같은 제목 기사와 오래된 기사는 빠짐
-  // 같은 사람·같은 날 아이템은 한 착장으로
-  const look = v.looks.find((l) => l.celeb === '문가영');
-  assert.deepStrictEqual(look.pieces.map((p) => `${p.category}/${p.item}/${p.brand}`), ['아우터/트렌치코트/버버리', '신발/로퍼/']);
-  assert.strictEqual(look.main, '트렌치코트');
-  // 점수: 이름 검색이 오르고 같은 글이 적은 문가영 착장이 더 높고 🔥
-  const other = v.looks.find((l) => l.celeb === '가수 B');
-  assert.strictEqual(look.score.celebChange, 100);
-  assert.strictEqual(look.score.posts, 50);
-  assert.ok(look.score.score > other.score.score);
-  assert.ok(look.hot && !other.hot);
-  // 이미 쓰인 글: 이름이 들어간 글만, 내 글 표시
-  assert.deepStrictEqual(look.score.blogs.map((b) => [b.link, b.mine]), [['https://blog.naver.com/other/1', false], ['https://blog.naver.com/mylog/3', true]]);
-  assert.deepStrictEqual(other.score.blogs, []);
+  assert.strictEqual(v.lastNew, 3); // 같은 제목 기사와 오래된 기사는 빠짐
+
+  // 같은 사람·같은 아이템은 한 항목: 기사 2건(공항패션·사복패션)이 합쳐짐
+  const trench = v.hots.find((h) => h.celeb === '문가영' && h.item === '트렌치코트');
+  assert.strictEqual(trench.articles.length, 2);
+  assert.deepStrictEqual([trench.situation, trench.brand, trench.product, trench.buzz], ['공항패션', '버버리', '켄싱턴 트렌치', true]);
+  assert.strictEqual(trench.name, '문가영 공항패션 버버리 켄싱턴 트렌치');
+  assert.strictEqual(trench.sameLook[0], '로퍼'); // 같은 날 같이 입은 옷
+
+  // 점수 = 블로그 글 수 중심: 이름+아이템이 모두 들어간 글만, 7일/3일 구분
+  assert.strictEqual(trench.score.blog7, 6); // 1일 전 3개 + 5일 전 3개 (30일 전 글·로퍼 글은 제외)
+  assert.strictEqual(trench.score.blog3, 3);
+  assert.strictEqual(trench.score.posts, 50);
+  const knit = v.hots.find((h) => h.item === '니트');
+  assert.ok(trench.score.score > knit.score.score);
+  assert.ok(trench.hot && !knit.hot); // 블로그 글이 충분히 쓰인 옷만 🔥
+  assert.strictEqual(knit.score.blog7, 0); // 이름이 안 들어간 글은 안 셈
+  assert.ok(knit.score.blog7 < v.minBlog7);
+  // 이미 쓰인 상위 글: 이름·아이템이 들어간 글만, 내 글 표시
+  assert.ok(trench.score.blogs.length >= 1 && trench.score.blogs.every((b) => b.title.includes('트렌치코트')));
+  assert.ok(trench.score.blogs.some((b) => b.mine));
 
   const calls = sent.length;
   await celeb.refresh(); // 새 기사가 없으면 Claude를 부르지 않음
   assert.strictEqual(sent.length, calls);
-  assert.strictEqual(celeb.view().looks.length, 2);
 });
 
-test('고치기·숨기기, 이미 쓴 착장, 이 착장으로 글 만들기', () => {
+test('고치기·숨기기, 이미 쓴 착장, 이 옷으로 글 만들기', () => {
   const db = store.load();
   const v = celeb.view();
-  const look = v.looks.find((l) => l.celeb === '문가영');
-  const loafer = look.pieces.find((p) => p.item === '로퍼');
-  celeb.editItem(loafer.id, { brand: '구찌', product: '홀스빗 로퍼' });
-  const b = celeb.view().looks.find((l) => l.celeb === '문가영');
-  assert.strictEqual(b.pieces.find((p) => p.item === '로퍼').brand, '구찌');
-  const knit = celeb.view().looks.find((l) => l.celeb === '가수 B').pieces[0];
-  celeb.editItem(knit.id, { hidden: true });
-  assert.ok(!celeb.view().looks.some((l) => l.celeb === '가수 B'));
+  const trench = v.hots.find((h) => h.celeb === '문가영' && h.item === '트렌치코트');
+  celeb.editItem(trench.ids[0], { brand: '버버리 런던', situation: '사복패션' });
+  assert.strictEqual(celeb.view().hots.find((h) => h.id === trench.id).brand, '버버리 런던');
+  const knit = v.hots.find((h) => h.item === '니트');
+  celeb.editItem(knit.ids[0], { hidden: true });
+  assert.ok(!celeb.view().hots.some((h) => h.item === '니트'));
   assert.throws(() => celeb.editItem('nope', { hidden: true }), /찾을 수 없어요/);
 
   db.posts = [{ title: '문가영 트렌치코트 공항패션 정보', pubDate: store.kstDate() }];
-  assert.strictEqual(celeb.view().looks.find((l) => l.celeb === '문가영').written, true);
+  assert.strictEqual(celeb.view().hots.find((h) => h.id === trench.id).written, true);
 
-  const board = celeb.boardFromLook(look.id, { plannedDate: '2026-12-01' });
+  const board = celeb.boardFromHot(trench.id, { plannedDate: '2026-12-01' });
   assert.strictEqual(board.keyword, '트렌치코트');
   assert.strictEqual(board.plannedDate, '2026-12-01');
-  assert.ok(board.title.startsWith('문가영 착장 정보 · 트렌치코트·로퍼 (버버리)'));
-  assert.deepStrictEqual(board.products.map((p) => p.name), ['버버리 트렌치코트', '구찌 홀스빗 로퍼']);
+  assert.ok(board.title.includes('문가영') && board.title.includes('트렌치코트'));
+  assert.deepStrictEqual(board.products.map((p) => p.name), ['버버리 런던 켄싱턴 트렌치', '로퍼']); // 옷 + 같이 입은 아이템
   assert.ok(board.memo.includes('https://news/a'));
   assert.strictEqual(db.boards[0].id, board.id);
+});
+
+test('상황 키워드 짐작과 착장 이름', () => {
+  assert.strictEqual(celeb.guessSituation('문가영 공항 출국길 패션'), '공항패션');
+  assert.strictEqual(celeb.guessSituation('○○ 사복 패션 화제'), '사복패션');
+  assert.strictEqual(celeb.guessSituation('그냥 기사'), '기타');
+  assert.strictEqual(celeb.hotName({ celeb: 'A', situation: '공항패션', brand: '구찌', product: '홀스빗 로퍼', item: '로퍼' }), 'A 공항패션 구찌 홀스빗 로퍼');
+  assert.strictEqual(celeb.hotName({ celeb: 'A', situation: '기타', brand: '', product: '', item: '니트' }), 'A 니트');
+  assert.ok(celeb.hotScore({ blog7: 10, blog3: 4, articles: 2, buzz: true }) > celeb.hotScore({ blog7: 10, blog3: 4, articles: 2, buzz: false }));
+  assert.ok(celeb.hotScore({ blog7: 20, articles: 1 }) > celeb.hotScore({ blog7: 0, articles: 5 })); // 블로그 글이 기사 수보다 중요
 });
 
 test('아이템 이름 통일과 종류 추정', () => {

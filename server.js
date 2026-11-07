@@ -240,7 +240,7 @@ const routes = [
     return celeb.view();
   }],
   ['PUT', /^\/api\/celeb\/items\/(\w+)$/, (m, body) => celeb.editItem(m[1], body)],
-  ['POST', /^\/api\/celeb\/board$/, (m, body) => celeb.boardFromLook(String(body.lookId || ''), body)],
+  ['POST', /^\/api\/celeb\/board$/, (m, body) => celeb.boardFromHot(String(body.hotId || ''), body)],
   ['GET', /^\/api\/celeb\/similar$/, async (m, b, q) => {
     // 셀럽이 입은 아이템과 같은 종류의 다른 브랜드 제품 (블로그 언급 기준) + 가격대별 쇼핑 검색
     const item = String(q.get('item') || '').slice(0, 40);
